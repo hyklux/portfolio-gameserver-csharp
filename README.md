@@ -104,7 +104,7 @@ namespace Server
 ```
 **ClientSession.cs**
 - ClientSession 클래스는 SessionId와 해당 플레이어의 정보를 갖고 있다.
-```
+``` c#
 namespace Server
 {	
 	public class ClientSession : PacketSession
@@ -116,9 +116,9 @@ namespace Server
 	}
 	//...이하 생략
 }
-```
+``` c#
 - 서버에 접속/접속해제 시 처리가 정의되어 있다.
-```
+``` c#
 public override void OnConnected(EndPoint endPoint)
 {
 	Console.WriteLine($"OnConnected : {endPoint}");
@@ -153,7 +153,7 @@ public override void OnDisconnected(EndPoint endPoint)
 }
 ```
 - 클라로부터 패킷을 받았을 때/보냈을 때 처리가 정의되어 있다. 
-```
+``` c#
 public void Send(IMessage packet)
 {
 	string msgName = packet.Descriptor.Name.Replace("_", string.Empty);
