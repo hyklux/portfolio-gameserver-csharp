@@ -104,7 +104,7 @@ namespace Server
 	}
 }
 ```
-**ClientSession.cs**
+### **ClientSession.cs**
 - ClientSession 클래스는 SessionId와 해당 플레이어의 정보를 갖고 있다.
 ``` c#
 namespace Server
