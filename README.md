@@ -172,7 +172,7 @@ public override void OnRecvPacket(ArraySegment<byte> buffer)
 	PacketManager.Instance.OnRecvPacket(this, buffer);
 }
 ```
-## 패킷 
+## 패킷 처리
 ## 게임 데이터 관리
 ## Job 관리
 ## 게임룸 입장 및 관리
