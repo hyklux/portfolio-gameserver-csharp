@@ -68,9 +68,8 @@ namespace Server.Data
 ```
 ## 세션 관리
 **SessionManager.cs**
-
-
-접속된 클라이언트 세션 정보를 저장 및 관리한다. 클라이언트가 서버에 접속하연 전용 ClientSession 객체를 생성하고 SessionId를 부여한다.
+- 접속된 클라이언트 세션 정보를 저장 및 관리한다.
+- 클라이언트가 서버에 접속하연 전용 ClientSession 객체를 생성하고 SessionId를 부여한다.
 ``` c#
 namespace Server
 {
@@ -103,10 +102,8 @@ namespace Server
 	}
 }
 ```
-- ClientSession.cs
-
-
-ClientSession 클래스는 SessionId와 해당 플레이어의 정보를 갖고 있다.
+**ClientSession.cs**
+- ClientSession 클래스는 SessionId와 해당 플레이어의 정보를 갖고 있다.
 ```
 namespace Server
 {	
@@ -120,8 +117,9 @@ namespace Server
 	//...이하 생략
 }
 ```
-서버에 접속/접속해제 시 처리가 정의되어 있다.
+- 서버에 접속/접속해제 시 처리가 정의되어 있다.
 ```
+public override void OnConnected(EndPoint endPoint)
 {
 	Console.WriteLine($"OnConnected : {endPoint}");
 
@@ -154,7 +152,7 @@ public override void OnDisconnected(EndPoint endPoint)
 	Console.WriteLine($"OnDisconnected : {endPoint}");
 }
 ```
-클라로부터 패킷을 받았을 때/보냈을 때 처리가 정의되어 있다. 
+- 클라로부터 패킷을 받았을 때/보냈을 때 처리가 정의되어 있다. 
 ```
 public void Send(IMessage packet)
 {
