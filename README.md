@@ -41,6 +41,8 @@ C# 게임서버 포트폴리오입니다.
 :heavy_check_mark: 적->플레이어 Skill AI
 
 ## 게임 설정(Config) 관리
+- 설정과 관련된 정보를 Config.json로 작성한다.
+- 서버가 시작되면 LoadConfig()를 호출하여 Config 파일을 로드 후, ServerConfig 객체에 매핑한다.
 ``` c#
 namespace Server.Data
 {
