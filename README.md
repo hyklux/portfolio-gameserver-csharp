@@ -71,7 +71,7 @@ namespace Server.Data
 ## 세션 관리
 ### **SessionManager.cs**
 - 접속된 클라이언트 세션 정보를 저장 및 관리한다.
-- 클라이언트가 서버에 접속하연 전용 ClientSession 객체를 생성하고 SessionId를 부여한다.
+- 클라이언트가 서버에 접속하연 Generate()를 호출하여 전용 ClientSession 객체를 생성하고 SessionId를 부여한다.
 ``` c#
 namespace Server
 {
