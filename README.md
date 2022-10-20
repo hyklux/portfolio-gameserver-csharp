@@ -120,11 +120,15 @@ namespace Server
 }
 ``` c#
 - 서버에 접속/접속해제 시 처리가 정의되어 있다.
+- 생성 직후 OnConnected()가 호출되어 나의 플레이어 정보가 생성되고 게임룸에 입장한다.
+- 접속 해제 시 게임룸에서 퇴장시키며 ClientSession 객제도 더 이상 SessionManager에 의해 관리되지 않게 된다.
 ``` c#
+//접속 시 호출
 public override void OnConnected(EndPoint endPoint)
 {
 	Console.WriteLine($"OnConnected : {endPoint}");
 
+	//나의 플레이어 정보 생성
 	MyPlayer = ObjectManager.Instance.Add<Player>();
 	{
 		MyPlayer.Info.Name = $"Player_{MyPlayer.Info.ObjectId}";
@@ -140,15 +144,19 @@ public override void OnConnected(EndPoint endPoint)
 		MyPlayer.Session = this;
 	}
 
+	//게임룸 입장
 	GameRoom room = RoomManager.Instance.Find(1);
 	room.Push(room.EnterGame, MyPlayer);
 }
 
+//접속 해제 시 호출
 public override void OnDisconnected(EndPoint endPoint)
 {
+	//게임룸 퇴장
 	GameRoom room = RoomManager.Instance.Find(1);
 	room.Push(room.LeaveGame, MyPlayer.Info.ObjectId);
 
+	//세션매니저에서 해제
 	SessionManager.Instance.Remove(this);
 
 	Console.WriteLine($"OnDisconnected : {endPoint}");
