@@ -5,25 +5,42 @@ C# 게임서버 포트폴리오
 C# 게임서버 포트폴리오입니다.
 
 ## 기능
-:heavy_check_mark: ConfigManager
+:heavy_check_mark: 서버 설정(Config) 관리
 
 
-:heavy_check_mark: SessionManager
+:heavy_check_mark: 세션 관리
 
 
-:heavy_check_mark: PacketManager
+:heavy_check_mark: 패킷 처리
 
 
-:heavy_check_mark: DataManager
+:heavy_check_mark: 데이터 관리
 
 
-:heavy_check_mark: RoomManager
+:heavy_check_mark: Job 관리
 
 
-:heavy_check_mark: JobManager
+:heavy_check_mark: 게임룸 입장 및 관리
 
 
-## ConfigManager
+:heavy_check_mark: 플레이어 이동 동기화
+
+
+:heavy_check_mark: 플레이어 스킬 처리
+
+
+:heavy_check_mark: 플레이어 Hit 판정 처리
+
+
+:heavy_check_mark: 플레이어 Damage 처리
+
+
+:heavy_check_mark: 적->플레이어 Search AI
+
+
+:heavy_check_mark: 적->플레이어 Skill AI
+
+## 게임 설정(Config) 관리
 ``` c#
 namespace Server.Data
 {
@@ -49,7 +66,7 @@ namespace Server.Data
 	}
 }
 ```
-## SessionManager
+## 세션 관리
 - SessionManager.cs
 
 
@@ -157,7 +174,13 @@ public override void OnRecvPacket(ArraySegment<byte> buffer)
 	PacketManager.Instance.OnRecvPacket(this, buffer);
 }
 ```
-## PacketManager
-## DataManager
-## RoomManager
-## JobManager
+## 패킷 
+## 게임 데이터 관리
+## Job 관리
+## 게임룸 입장 및 관리
+## 플레이어 이동 동기화
+## 플레이어 스킬 처리
+## 플레이어 Hit 판정 처리
+## 플레이어 Damage 처리
+## 적->플레이어 Search AI
+## 적->플레이어 Skill AI
