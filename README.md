@@ -51,6 +51,8 @@ namespace Server.Data
 ```
 ## SessionManager
 - SessionManager.cs
+
+
 접속된 클라이언트 세션 정보를 저장 및 관리한다. 클라이언트가 서버에 접속하연 전용 ClientSession 객체를 생성하고 SessionId를 부여한다.
 ``` c#
 namespace Server
@@ -85,6 +87,8 @@ namespace Server
 }
 ```
 - ClientSession.cs
+
+
 ClientSession 클래스는 SessionId와 해당 플레이어의 정보를 갖고 있다.
 ```
 namespace Server
