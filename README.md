@@ -84,6 +84,7 @@ namespace Server
 		Dictionary<int, ClientSession> _sessions = new Dictionary<int, ClientSession>();
 		object _lock = new object();
 
+		//클라이언트가 서버 접속 시 호출
 		public ClientSession Generate()
 		{
 			lock (_lock)
@@ -113,9 +114,8 @@ namespace Server
 	{
 		public Player MyPlayer { get; set; }
 		public int SessionId { get; set; }
-	
-		...
 	}
+	
 	//...이하 생략
 }
 ```
