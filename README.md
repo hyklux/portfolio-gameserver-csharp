@@ -162,7 +162,7 @@ public override void OnDisconnected(EndPoint endPoint)
 	Console.WriteLine($"OnDisconnected : {endPoint}");
 }
 ```
-- 클라로부터 패킷을 받았을 때/보냈을 때 처리가 정의되어 있다. 
+- 클라로부터 패킷을 수신/송신 시 처리가 정의되어 있다. 
 ``` c#
 public void Send(IMessage packet)
 {
