@@ -106,7 +106,7 @@ class SessionManager
 		}
 	}
 		
-	//...이하 생략
+	//...(중략)
 }
 ```
 ### **ClientSession.cs**
@@ -117,7 +117,7 @@ public class ClientSession : PacketSession
 	public Player MyPlayer { get; set; }
 	public int SessionId { get; set; }
 
-	//...이하 생략
+	//...(중략)
 }
 ```
 - 서버에 접속/접속해제 시 처리가 정의되어 있다.
@@ -129,6 +129,8 @@ namespace Server
 {	
 	public class ClientSession : PacketSession
 	{
+		//...(중략)
+		
 		public override void OnConnected(EndPoint endPoint)
 		{
 			Console.WriteLine($"OnConnected : {endPoint}");
@@ -153,6 +155,8 @@ namespace Server
 			GameRoom room = RoomManager.Instance.Find(1);
 			room.Push(room.EnterGame, MyPlayer);
 		}
+		
+		//...(중략)
 	}
 }
 
