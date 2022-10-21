@@ -121,77 +121,81 @@ public class ClientSession : PacketSession
 }
 ```
 - 서버에 접속/접속해제 시 처리가 정의되어 있다.
-- 생성 직후 OnConnected()가 호출되어 나의 플레이어 정보가 생성되고 게임룸에 입장한다.
-- 접속 해제 시 게임룸에서 퇴장시키며 ClientSession 객제도 더 이상 SessionManager에 의해 관리되지 않게 된다.
+- 생성 직후 OnConnected(EndPoint endPoint)를 호출하여 나의 플레이어 정보가 생성되고 게임룸에 입장한다.
+- 접속 해제 시 OnDisconnected(EndPoint endPoint) 호출을 통해 게임룸에서 퇴장시키며 ClientSession 객제도 더 이상 SessionManager에 의해 관리되지 않게 된다.
 ``` c#
 //접속 시 호출
-namespace Server
-{	
-	public class ClientSession : PacketSession
-	{
-		//...(중략)
-		
-		public override void OnConnected(EndPoint endPoint)
-		{
-			Console.WriteLine($"OnConnected : {endPoint}");
-
-			//나의 플레이어 정보 생성
-			MyPlayer = ObjectManager.Instance.Add<Player>();
-			{
-				MyPlayer.Info.Name = $"Player_{MyPlayer.Info.ObjectId}";
-				MyPlayer.Info.PosInfo.State = CreatureState.Idle;
-				MyPlayer.Info.PosInfo.MoveDir = MoveDir.Down;
-				MyPlayer.Info.PosInfo.PosX = 0;
-				MyPlayer.Info.PosInfo.PosY = 0;
-
-				StatInfo stat = null;
-				DataManager.StatDict.TryGetValue(1, out stat);
-				MyPlayer.Stat.MergeFrom(stat);
-
-				MyPlayer.Session = this;
-			}
-
-			//게임룸 입장
-			GameRoom room = RoomManager.Instance.Find(1);
-			room.Push(room.EnterGame, MyPlayer);
-		}
-		
-		//...(중략)
-	}
-}
-
-//접속 해제 시 호출
-public override void OnDisconnected(EndPoint endPoint)
+public class ClientSession : PacketSession
 {
-	//게임룸 퇴장
-	GameRoom room = RoomManager.Instance.Find(1);
-	room.Push(room.LeaveGame, MyPlayer.Info.ObjectId);
+	//...(중략)
+		
+	public override void OnConnected(EndPoint endPoint)
+	{
+		Console.WriteLine($"OnConnected : {endPoint}");
 
-	//세션매니저에서 해제
-	SessionManager.Instance.Remove(this);
+		//나의 플레이어 정보 생성
+		MyPlayer = ObjectManager.Instance.Add<Player>();
+		{
+			MyPlayer.Info.Name = $"Player_{MyPlayer.Info.ObjectId}";
+			MyPlayer.Info.PosInfo.State = CreatureState.Idle;
+			MyPlayer.Info.PosInfo.MoveDir = MoveDir.Down;
+			MyPlayer.Info.PosInfo.PosX = 0;
+			MyPlayer.Info.PosInfo.PosY = 0;
 
-	Console.WriteLine($"OnDisconnected : {endPoint}");
+			StatInfo stat = null;
+			DataManager.StatDict.TryGetValue(1, out stat);
+			MyPlayer.Stat.MergeFrom(stat);
+
+			MyPlayer.Session = this;
+		}
+
+		//게임룸 입장
+		GameRoom room = RoomManager.Instance.Find(1);
+		room.Push(room.EnterGame, MyPlayer);
+	}
+		
+	//접속 해제 시 호출
+	public override void OnDisconnected(EndPoint endPoint)
+	{
+		//게임룸 퇴장
+		GameRoom room = RoomManager.Instance.Find(1);
+		room.Push(room.LeaveGame, MyPlayer.Info.ObjectId);
+
+		//세션매니저에서 해제
+		SessionManager.Instance.Remove(this);
+
+		Console.WriteLine($"OnDisconnected : {endPoint}");
+	}
+	
+	//...(중략)
 }
 ```
 - 클라로부터 패킷을 수신/송신 시 처리가 정의되어 있다.
 - (추가 설명 필요) 패킷 변환 
 ``` c#
-public void Send(IMessage packet)
+public class ClientSession : PacketSession
 {
-	string msgName = packet.Descriptor.Name.Replace("_", string.Empty);
-	MsgId msgId = (MsgId)Enum.Parse(typeof(MsgId), msgName);
-	ushort size = (ushort)packet.CalculateSize();
-	byte[] sendBuffer = new byte[size + 4];
-	Array.Copy(BitConverter.GetBytes((ushort)(size + 4)), 0, sendBuffer, 0, sizeof(ushort)); //버퍼 사이즈 값 추가
-	Array.Copy(BitConverter.GetBytes((ushort)msgId), 0, sendBuffer, 2, sizeof(ushort)); //msgId 값 추가
-	Array.Copy(packet.ToByteArray(), 0, sendBuffer, 4, size);
+	//...(중략)
 	
-	Send(new ArraySegment<byte>(sendBuffer));
-}
+	public void Send(IMessage packet)
+	{
+		string msgName = packet.Descriptor.Name.Replace("_", string.Empty);
+		MsgId msgId = (MsgId)Enum.Parse(typeof(MsgId), msgName);
+		ushort size = (ushort)packet.CalculateSize();
+		byte[] sendBuffer = new byte[size + 4];
+		Array.Copy(BitConverter.GetBytes((ushort)(size + 4)), 0, sendBuffer, 0, sizeof(ushort)); //버퍼 사이즈 값 추가
+		Array.Copy(BitConverter.GetBytes((ushort)msgId), 0, sendBuffer, 2, sizeof(ushort)); //msgId 값 추가
+		Array.Copy(packet.ToByteArray(), 0, sendBuffer, 4, size);
+	
+		Send(new ArraySegment<byte>(sendBuffer));
+	}
 
-public override void OnRecvPacket(ArraySegment<byte> buffer)
-{
-	PacketManager.Instance.OnRecvPacket(this, buffer);
+	public override void OnRecvPacket(ArraySegment<byte> buffer)
+	{
+		PacketManager.Instance.OnRecvPacket(this, buffer);
+	}
+	
+	//...(중략)
 }
 ```
 
@@ -226,23 +230,32 @@ class PacketManager
 		_onRecv.Add((ushort)MsgId.CSkill, MakePacket<C_Skill>);
 		_handler.Add((ushort)MsgId.CSkill, PacketHandler.C_SkillHandler);
 	}
+	
+	//...(중략)
 }	
 ```
 - 패킷을 수신하면 특정 패킷에 맞는 핸들러를 찾아 실행한다. 
 - (추가 설명 필요) id, size 관련
 ``` c#
-public void OnRecvPacket(PacketSession session, ArraySegment<byte> buffer)
+class PacketManager
 {
-	ushort count = 0;
+	//...(중략)
+	
+	public void OnRecvPacket(PacketSession session, ArraySegment<byte> buffer)
+	{
+		ushort count = 0;
 
-	ushort size = BitConverter.ToUInt16(buffer.Array, buffer.Offset);
-	count += 2;
-	ushort id = BitConverter.ToUInt16(buffer.Array, buffer.Offset + count);
-	count += 2;
+		ushort size = BitConverter.ToUInt16(buffer.Array, buffer.Offset);
+		count += 2;
+		ushort id = BitConverter.ToUInt16(buffer.Array, buffer.Offset + count);
+		count += 2;
 
-	Action<PacketSession, ArraySegment<byte>, ushort> action = null;
-	if (_onRecv.TryGetValue(id, out action))
-		action.Invoke(session, buffer, id);
+		Action<PacketSession, ArraySegment<byte>, ushort> action = null;
+		if (_onRecv.TryGetValue(id, out action))
+			action.Invoke(session, buffer, id);
+	}
+	
+	//...(중략)
 }
 ```
 
@@ -300,33 +313,33 @@ class PacketHandler
 - 게임에 필요한 데이터 Dictionary 형태로 관리한다.
 - 게임 시작 시 json 파일을 읽어와 dictionary에 저장한다.
 ``` c#
-namespace Server.Data
+public interface ILoader<Key, Value>
 {
-	public interface ILoader<Key, Value>
+	Dictionary<Key, Value> MakeDict();
+}
+
+public class DataManager
+{
+	//데이터는 Dictionary 형태로 관리
+	public static Dictionary<int, StatInfo> StatDict { get; private set; } = new Dictionary<int, StatInfo>();
+	public static Dictionary<int, Data.Skill> SkillDict { get; private set; } = new Dictionary<int, Data.Skill>();
+
+	public static void LoadData()
 	{
-		Dictionary<Key, Value> MakeDict();
+		//스탯데이터 로드
+		StatDict = LoadJson<Data.StatData, int, StatInfo>("StatData").MakeDict();
+		//스킬데이터 로드
+		SkillDict = LoadJson<Data.SkillData, int, Data.Skill>("SkillData").MakeDict();
 	}
 
-	public class DataManager
+	static Loader LoadJson<Loader, Key, Value>(string path) where Loader : ILoader<Key, Value>
 	{
-		//데이터는 Dictionary 형태로 관리
-		public static Dictionary<int, StatInfo> StatDict { get; private set; } = new Dictionary<int, StatInfo>();
-		public static Dictionary<int, Data.Skill> SkillDict { get; private set; } = new Dictionary<int, Data.Skill>();
-
-		public static void LoadData()
-		{
-			//스탯데이터 로드
-			StatDict = LoadJson<Data.StatData, int, StatInfo>("StatData").MakeDict();
-			//스킬데이터 로드
-			SkillDict = LoadJson<Data.SkillData, int, Data.Skill>("SkillData").MakeDict();
-		}
-
-		static Loader LoadJson<Loader, Key, Value>(string path) where Loader : ILoader<Key, Value>
-		{
-			string text = File.ReadAllText($"{ConfigManager.Config.dataPath}/{path}.json");
-			return Newtonsoft.Json.JsonConvert.DeserializeObject<Loader>(text);
-		}
+		string text = File.ReadAllText($"{ConfigManager.Config.dataPath}/{path}.json");
+		return Newtonsoft.Json.JsonConvert.DeserializeObject<Loader>(text);
 	}
+	
+	//...(중략)
+}
 }
 ```
 
@@ -338,53 +351,50 @@ namespace Server.Data
 - 게임에 존재하는 게임룸을 관리한다.
 - 게임룸 생성, 해제, 특정 게임룸 검색 등의 기능을 수행한다.
 ``` c#
-namespace Server.Game
+public class RoomManager
 {
-	public class RoomManager
-	{
-		public static RoomManager Instance { get; } = new RoomManager();
+	public static RoomManager Instance { get; } = new RoomManager();
 
-		//dictionary에 존재하는 룸 저장 및 관리
-		Dictionary<int, GameRoom> _rooms = new Dictionary<int, GameRoom>();
-		object _lock = new object();
-		int _roomId = 1;
+	//dictionary에 존재하는 룸 저장 및 관리
+	Dictionary<int, GameRoom> _rooms = new Dictionary<int, GameRoom>();
+	object _lock = new object();
+	int _roomId = 1;
 		
-		//게임룸 추가
-		public GameRoom Add(int mapId)
+	//게임룸 추가
+	public GameRoom Add(int mapId)
+	{
+		GameRoom gameRoom = new GameRoom();
+		gameRoom.Push(gameRoom.Init, mapId);
+
+		lock (_lock)
 		{
-			GameRoom gameRoom = new GameRoom();
-			gameRoom.Push(gameRoom.Init, mapId);
-
-			lock (_lock)
-			{
-				gameRoom.RoomId = _roomId;
-				_rooms.Add(_roomId, gameRoom);
-				_roomId++;
-			}
-
-			return gameRoom;
+			gameRoom.RoomId = _roomId;
+			_rooms.Add(_roomId, gameRoom);
+			_roomId++;
 		}
 
-		//게임룸 삭제
-		public bool Remove(int roomId)
+		return gameRoom;
+	}
+
+	//게임룸 삭제
+	public bool Remove(int roomId)
+	{
+		lock (_lock)
 		{
-			lock (_lock)
-			{
-				return _rooms.Remove(roomId);
-			}
+			return _rooms.Remove(roomId);
 		}
+	}
 
-		//게임룸 검색
-		public GameRoom Find(int roomId)
+	//게임룸 검색
+	public GameRoom Find(int roomId)
+	{
+		lock (_lock)
 		{
-			lock (_lock)
-			{
-				GameRoom room = null;
-				if (_rooms.TryGetValue(roomId, out room))
-					return room;
+			GameRoom room = null;
+			if (_rooms.TryGetValue(roomId, out room))
+				return room;
 
-				return null;
-			}
+			return null;
 		}
 	}
 }
@@ -396,123 +406,138 @@ namespace Server.Game
 - 초기화 시 특정 맵Id에 해당하는 맵데이터를 로드한다.
 - 플레이어의 이동 동기화, 스킬 처리, 판정 처리 등 게임룸 내에서 이루어지는 행위를 실질적으로 처리하는 객체이다.
 ``` c#
-namespace Server.Game
+public class GameRoom : JobSerializer
 {
-	public class GameRoom : JobSerializer
+	//게임룸 Id
+	public int RoomId { get; set; }
+
+	//게임룸 내에 존재하는 객체들을 dictionary 형태로 관리한다.
+	Dictionary<int, Player> _players = new Dictionary<int, Player>();
+	Dictionary<int, Monster> _monsters = new Dictionary<int, Monster>();
+	Dictionary<int, Projectile> _projectiles = new Dictionary<int, Projectile>();
+
+	//맵 데이터
+	public Map Map { get; private set; } = new Map();
+
+	//게임룸 초기화
+	public void Init(int mapId)
 	{
-		//게임룸 Id
-		public int RoomId { get; set; }
-
-		//게임룸 내에 존재하는 객체들을 dictionary 형태로 관리한다.
-		Dictionary<int, Player> _players = new Dictionary<int, Player>();
-		Dictionary<int, Monster> _monsters = new Dictionary<int, Monster>();
-		Dictionary<int, Projectile> _projectiles = new Dictionary<int, Projectile>();
-
-		//맵 데이터
-		public Map Map { get; private set; } = new Map();
-
-		//게임룸 초기화
-		public void Init(int mapId)
-		{
-			Map.LoadMap(mapId);
-		}
-		
-		//...이하 생략
+		Map.LoadMap(mapId);
 	}
+		
+	//...이하 생략
 }
 ```
 - 서버가 지정한 프레임레이트에 맞게 Update()가 주기적으로 호출된다.
 - Update()에서는 게임룸 내 객체들의 상태를 업데이트하고, JobQueue 쌓인 작업(주로 패킷 처리)를 수행한다. 
 ``` c#
-public void Update()
+public class GameRoom : JobSerializer
 {
-	//게임 내 객체 업데이트 처리
-	foreach (Monster monster in _monsters.Values)
+	//...(중략)
+	
+	public void Update()
 	{
-		monster.Update();
-	}
+		//게임 내 객체 업데이트 처리
+		foreach (Monster monster in _monsters.Values)
+		{
+			monster.Update();
+		}
 
-	foreach (Projectile projectile in _projectiles.Values)
-	{
-		projectile.Update();
-	}
+		foreach (Projectile projectile in _projectiles.Values)
+		{
+			projectile.Update();
+		}
 
-	//JobQueue에 쌓인 Job을 순차적으로 실행한다.
-	Flush();
+		//JobQueue에 쌓인 Job을 순차적으로 실행한다.
+		Flush();
+	}
+	
+	//...(중략)
 }
 ``` 
 - EnterGame(GameObject gameObject) 함수로 게임룸에 추가되는 객체를 저장하고 다른 클라이언트 세션에게 그 내용을 통보한다.
 ``` c#
 //게임 입장
-public void EnterGame(GameObject gameObject)
+
+public class GameRoom : JobSerializer
 {
-	if (gameObject == null)
-		return;
-
-	GameObjectType type = ObjectManager.GetObjectTypeById(gameObject.Id);
-
-	//플레이어일 경우
-	if (type == GameObjectType.Player)
+	//...(중략)
+	
+	public void EnterGame(GameObject gameObject)
 	{
-		Player player = gameObject as Player;
-		_players.Add(gameObject.Id, player);
-		player.Room = this;
+		if (gameObject == null)
+			return;
 
-		Map.ApplyMove(player, new Vector2Int(player.CellPos.x, player.CellPos.y));
+		GameObjectType type = ObjectManager.GetObjectTypeById(gameObject.Id);
 
-		// 본인한테 정보 전송
+		//플레이어일 경우
+		if (type == GameObjectType.Player)
 		{
-			S_EnterGame enterPacket = new S_EnterGame();
-			enterPacket.Player = player.Info;
-			player.Session.Send(enterPacket);
+			Player player = gameObject as Player;
+			_players.Add(gameObject.Id, player);
+			player.Room = this;
 
+			Map.ApplyMove(player, new Vector2Int(player.CellPos.x, player.CellPos.y));
+
+			// 본인한테 정보 전송
+			{
+				S_EnterGame enterPacket = new S_EnterGame();
+				enterPacket.Player = player.Info;
+				player.Session.Send(enterPacket);
+
+				S_Spawn spawnPacket = new S_Spawn();
+				foreach (Player p in _players.Values)
+				{
+					if (player != p)
+						spawnPacket.Objects.Add(p.Info);
+				}
+
+				foreach (Monster m in _monsters.Values)
+					spawnPacket.Objects.Add(m.Info);
+
+				foreach (Projectile p in _projectiles.Values)
+					spawnPacket.Objects.Add(p.Info);
+
+				player.Session.Send(spawnPacket);
+			}
+		}
+		//몬스터 NPC일 경우
+		else if (type == GameObjectType.Monster)
+		{
+			Monster monster = gameObject as Monster;
+			_monsters.Add(gameObject.Id, monster);
+			monster.Room = this;
+
+			Map.ApplyMove(monster, new Vector2Int(monster.CellPos.x, monster.CellPos.y));
+		}
+		//투사체일 경우
+		else if (type == GameObjectType.Projectile)
+		{
+			Projectile projectile = gameObject as Projectile;
+			_projectiles.Add(gameObject.Id, projectile);
+			projectile.Room = this;
+		}
+	
+		// 타인한테 정보 전송
+		{
 			S_Spawn spawnPacket = new S_Spawn();
+			spawnPacket.Objects.Add(gameObject.Info);
 			foreach (Player p in _players.Values)
 			{
-				if (player != p)
-					spawnPacket.Objects.Add(p.Info);
+				if (p.Id != gameObject.Id)
+					p.Session.Send(spawnPacket);
 			}
-
-			foreach (Monster m in _monsters.Values)
-				spawnPacket.Objects.Add(m.Info);
-
-			foreach (Projectile p in _projectiles.Values)
-				spawnPacket.Objects.Add(p.Info);
-
-			player.Session.Send(spawnPacket);
 		}
-	}
-	//몬스터 NPC일 경우
-	else if (type == GameObjectType.Monster)
-	{
-		Monster monster = gameObject as Monster;
-		_monsters.Add(gameObject.Id, monster);
-		monster.Room = this;
-
-		Map.ApplyMove(monster, new Vector2Int(monster.CellPos.x, monster.CellPos.y));
-	}
-	//투사체일 경우
-	else if (type == GameObjectType.Projectile)
-	{
-		Projectile projectile = gameObject as Projectile;
-		_projectiles.Add(gameObject.Id, projectile);
-		projectile.Room = this;
 	}
 	
-	// 타인한테 정보 전송
-	{
-		S_Spawn spawnPacket = new S_Spawn();
-		spawnPacket.Objects.Add(gameObject.Info);
-		foreach (Player p in _players.Values)
-		{
-			if (p.Id != gameObject.Id)
-				p.Session.Send(spawnPacket);
-		}
-	}
+	//...(중략)
 }
 ```
 - LeaveGame(int objectId) 함수를 통해 게임룸에서 삭제 및 퇴장하는 객체를 해체하고 다른 클라이언트 세션에게 그 내용을 통보한다.
 ``` c#
+
+//...(중략)
+
 //게임 퇴장
 public void LeaveGame(int objectId)
 {
@@ -562,6 +587,8 @@ public void LeaveGame(int objectId)
 		}
 	}
 }
+
+//...(중략)
 ```
 
 
@@ -658,45 +685,56 @@ public class Map
 ### **JobSerializer.cs**
 - 패킷 핸들러 처리는 서버 lock을 최소화 하기 위해 Command 패턴을 사용한다.
 ``` c#
-namespace Server.Game
+//패킷 핸들러 처리는 서버 lock을 최소화 하기 위해 JobQueue 방식을 사용한다.
+public class JobSerializer
 {
-	//패킷 핸들러 처리는 서버 lock을 최소화 하기 위해 JobQueue 방식을 사용한다.
-	public class JobSerializer
-	{
-		JobTimer _timer = new JobTimer();
-		Queue<IJob> _jobQueue = new Queue<IJob>();
-		object _lock = new object();
-		bool _flush = false;
+	JobTimer _timer = new JobTimer();
+	Queue<IJob> _jobQueue = new Queue<IJob>();
+	object _lock = new object();
+	bool _flush = false;
 
-		//...이하 생략
-	}
+	//...(중략)
 }
 ```
 - 핸들러를 Job으로 변환하여 _jobQueue에 넣어준다.
 ``` c#
-public void Push(IJob job)
+public class JobSerializer
 {
-	lock (_lock)
+	//...(중략)
+	
+	public void Push(IJob job)
 	{
-		_jobQueue.Enqueue(job);
+		lock (_lock)
+		{
+			_jobQueue.Enqueue(job);
+		}
 	}
+	
+	//...(중략)
 }
 ```
 - 게임룸에서 특정 시간 주기로 Tick이 발동되며 Flush를 호출한다.
 - Flush()에서 _jobQueue에 쌓여있는 것들을 차례로 실행한다.
-``` c#		
-public void Flush()
+``` c#	
+public class JobSerializer
 {
-	_timer.Flush();
-
-	while (true)
+	//...(중략)
+	
+	public void Flush()
 	{
-		IJob job = Pop();
-		if (job == null)
-			return;
+		_timer.Flush();
 
-		job.Execute();
+		while (true)
+		{
+			IJob job = Pop();
+			if (job == null)
+				return;
+
+			job.Execute();
+		}
 	}
+	
+	//...(중략)
 }
 ```
 
