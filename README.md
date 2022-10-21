@@ -189,7 +189,7 @@ public override void OnRecvPacket(ArraySegment<byte> buffer)
 ```
 ## 패킷 처리
 ### **PacketManager.cs**
-- 초기화 시 Register()를 호출하여 패킷 수신 시 처리해야 할 핸드러를 등록한다.
+- 초기화 시 Register()를 호출하여 패킷 수신 시 처리해야 할 핸들러를 등록한다.
 ``` c#
 class PacketManager
 {
@@ -218,7 +218,7 @@ class PacketManager
 	}
 }	
 ```
-- 패킷을 수신하면 특정 패킷에 맞는 핸러를 찾아 실행한다. 
+- 패킷을 수신하면 특정 패킷에 맞는 핸들러를 찾아 실행한다. 
 ``` c#
 public void OnRecvPacket(PacketSession session, ArraySegment<byte> buffer)
 {
