@@ -327,10 +327,10 @@ public void Flush()
 
 
 ## 게임 데이터 관리
-### ** DataManager.cs**
+### **DataManager.cs**
 - 게임에 필요한 데이터 Dictionary 형태로 관리한다.
 - 게임 시작 시 json 파일을 읽어와 dictionary에 저장한다.
-```
+``` c#
 namespace Server.Data
 {
 	public interface ILoader<Key, Value>
