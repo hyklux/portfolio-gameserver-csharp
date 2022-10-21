@@ -20,9 +20,6 @@ C# 게임서버 포트폴리오입니다.
 :heavy_check_mark: 데이터 관리
 
 
-:heavy_check_mark: Job 관리
-
-
 :heavy_check_mark: 게임룸 입장 및 관리
 
 
@@ -330,7 +327,6 @@ public void Flush()
 
 
 ## 게임 데이터 관리
-## Job 관리
 ## 게임룸 입장 및 관리
 ## 플레이어 이동 동기화
 ## 플레이어 스킬 처리
