@@ -208,7 +208,7 @@ class PacketManager
 		
 	public Action<PacketSession, IMessage, ushort> CustomHandler { get; set; }
 
-	//패킷 수신 시 처리해야 할 핸드러를 등록 
+	//패킷 수신 시 처리해야 할 핸들러를 등록 
 	public void Register()
 	{		
 		_onRecv.Add((ushort)MsgId.CMove, MakePacket<C_Move>);
@@ -218,7 +218,7 @@ class PacketManager
 	}
 }	
 ```
-- 패킷을 수신하면 특정 패킷에 맞는 핸드러를 찾아 실행한다. 
+- 패킷을 수신하면 특정 패킷에 맞는 핸러를 찾아 실행한다. 
 ``` c#
 public void OnRecvPacket(PacketSession session, ArraySegment<byte> buffer)
 {
@@ -310,8 +310,8 @@ public void Push(IJob job)
 	}
 }
 ```
-- 게임룸에서 특정 시간 주기로 Tick이 발동되며 이 함수를 호출한다.
-- _jobQueue에 쌓여있는 것들을 차례로 실행한다.
+- 게임룸에서 특정 시간 주기로 Tick이 발동되며 Flush를 호출한다.
+- Flush()에서 _jobQueue에 쌓여있는 것들을 차례로 실행한다.
 ``` c#		
 public void Flush()
 {
