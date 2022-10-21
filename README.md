@@ -673,7 +673,7 @@ namespace Server.Game
 	}
 }
 ```
-- 핸들러를 Job으로 변환하여 _jobQueue 넣어준다.
+- 핸들러를 Job으로 변환하여 _jobQueue에 넣어준다.
 ``` c#
 public void Push(IJob job)
 {
