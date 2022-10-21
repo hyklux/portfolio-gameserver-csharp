@@ -569,20 +569,27 @@ public void LeaveGame(int objectId)
 # 맵 
 - (캡처 필요) 그리드 형태의 맵
 ### **Map.cs**
+- 맵은 2d 그리드 형태로 Map 객체는 맵에 대한 모든 데이터를 담고 있다.
+- Map 객체는 맵의 최소/최대 좌표, 맵의 크기, 장애물들에 대한 정보를 갖고 있다.
+- ApplyMove()를 호출하여 캐릭터를 현재 좌표에서 목표 좌표로 이동시킨다.
 ``` c#
 public class Map
 {
+	//맵 최소/최대 좌표
 	public int MinX { get; set; }
 	public int MaxX { get; set; }
 	public int MinY { get; set; }
 	public int MaxY { get; set; }
 
+	//맵 크기
 	public int SizeX { get { return MaxX - MinX + 1; } }
 	public int SizeY { get { return MaxY - MinY + 1; } }
 
+	//장애물들에 대한 정보
 	bool[,] _collision;
 	GameObject[,] _objects;
 
+	//목표 좌표로 이동 가능한지 확인
 	public bool CanGo(Vector2Int cellPos, bool checkObjects = true)
 	{
 		if (cellPos.x < MinX || cellPos.x > MaxX)
@@ -595,41 +602,7 @@ public class Map
 		return !_collision[y, x] && (!checkObjects || _objects[y, x] == null);
 	}
 
-	public GameObject Find(Vector2Int cellPos)
-	{
-		if (cellPos.x < MinX || cellPos.x > MaxX)
-			return null;
-		if (cellPos.y < MinY || cellPos.y > MaxY)
-			return null;
-
-		int x = cellPos.x - MinX;
-		int y = MaxY - cellPos.y;
-		return _objects[y, x];
-	}
-
-	public bool ApplyLeave(GameObject gameObject)
-	{
-		if (gameObject.Room == null)
-			return false;
-		if (gameObject.Room.Map != this)
-			return false;
-
-		PositionInfo posInfo = gameObject.PosInfo;
-		if (posInfo.PosX < MinX || posInfo.PosX > MaxX)
-			return false;
-		if (posInfo.PosY < MinY || posInfo.PosY > MaxY)
-			return false;
-
-		{
-			int x = posInfo.PosX - MinX;
-			int y = MaxY - posInfo.PosY;
-			if (_objects[y, x] == gameObject)
-				_objects[y, x] = null;
-		}
-
-		return true;
-	}
-
+	//목표 좌표로 도착 처리
 	public bool ApplyMove(GameObject gameObject, Vector2Int dest)
 	{
 		ApplyLeave(gameObject);
@@ -654,33 +627,29 @@ public class Map
 		posInfo.PosY = dest.y;
 		return true;
 	}
-
-	public void LoadMap(int mapId, string pathPrefix = "../../../../../Common/MapData")
+	
+	//특정 좌표에서 객체 떠남 처리
+	public bool ApplyLeave(GameObject gameObject)
 	{
-		string mapName = "Map_" + mapId.ToString("000");
+		if (gameObject.Room == null)
+			return false;
+		if (gameObject.Room.Map != this)
+			return false;
 
-		// Collision 관련 파일
-		string text = File.ReadAllText($"{pathPrefix}/{mapName}.txt");
-		StringReader reader = new StringReader(text);
+		PositionInfo posInfo = gameObject.PosInfo;
+		if (posInfo.PosX < MinX || posInfo.PosX > MaxX)
+			return false;
+		if (posInfo.PosY < MinY || posInfo.PosY > MaxY)
+			return false;
 
-		MinX = int.Parse(reader.ReadLine());
-		MaxX = int.Parse(reader.ReadLine());
-		MinY = int.Parse(reader.ReadLine());
-		MaxY = int.Parse(reader.ReadLine());
-
-		int xCount = MaxX - MinX + 1;
-		int yCount = MaxY - MinY + 1;
-		_collision = new bool[yCount, xCount];
-		_objects = new GameObject[yCount, xCount];
-
-		for (int y = 0; y < yCount; y++)
 		{
-			string line = reader.ReadLine();
-			for (int x = 0; x < xCount; x++)
-			{
-				_collision[y, x] = (line[x] == '1' ? true : false);
-			}
+			int x = posInfo.PosX - MinX;
+			int y = MaxY - posInfo.PosY;
+			if (_objects[y, x] == gameObject)
+				_objects[y, x] = null;
 		}
+
+		return true;
 	}
 }
 ```
@@ -731,7 +700,6 @@ public void Flush()
 	}
 }
 ```
-
 
 
 # 플레이어 이동 동기화
