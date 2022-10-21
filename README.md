@@ -281,7 +281,6 @@ class PacketHandler
 
 ### **JobSerializer.cs**
 - 패킷 핸들러 처리는 서버 lock을 최소화 하기 위해 Command 패턴을 사용한다.
-
 ``` c#
 namespace Server.Game
 {
@@ -297,6 +296,8 @@ namespace Server.Game
 	}
 }
 ```
+
+
 - 핸들러를 Job으로 변환하여 _jobQueue 넣어준다.
 ``` c#
 public void Push(IJob job)
@@ -360,7 +361,246 @@ namespace Server.Data
 	}
 }
 ```
+
+
 # 게임룸 입장 및 관리
+### **RoomManager.cs**
+- 게임에 존재하는 게임룸을 관리한다.
+- 게임룸 생성, 해제, 특정 게임룸 검색 등의 기능을 수행한다.
+``` c#
+namespace Server.Game
+{
+	public class RoomManager
+	{
+		public static RoomManager Instance { get; } = new RoomManager();
+
+		//dictionary에 존재하는 룸 저장 및 관리
+		Dictionary<int, GameRoom> _rooms = new Dictionary<int, GameRoom>();
+		object _lock = new object();
+		int _roomId = 1;
+		
+		//게임룸 추가
+		public GameRoom Add(int mapId)
+		{
+			GameRoom gameRoom = new GameRoom();
+			gameRoom.Push(gameRoom.Init, mapId);
+
+			lock (_lock)
+			{
+				gameRoom.RoomId = _roomId;
+				_rooms.Add(_roomId, gameRoom);
+				_roomId++;
+			}
+
+			return gameRoom;
+		}
+
+		//게임룸 삭제
+		public bool Remove(int roomId)
+		{
+			lock (_lock)
+			{
+				return _rooms.Remove(roomId);
+			}
+		}
+
+		//게임룸 검색
+		public GameRoom Find(int roomId)
+		{
+			lock (_lock)
+			{
+				GameRoom room = null;
+				if (_rooms.TryGetValue(roomId, out room))
+					return room;
+
+				return null;
+			}
+		}
+	}
+}
+```
+
+
+### **GameRoom.cs**
+- 게임룸 객체로 게임룸Id, 맵데이터, 게임룸 내에 존재하는 다양한 객체를 관리한다.
+- 초기화 시 특정 맵Id에 해당하는 맵데이터를 로드한다.
+- 플레이어의 이동 동기화, 스킬 처리, 판정 처리 등 게임룸 내에서 이루어지는 행위를 실질적으로 처리하는 객체이다.
+``` c#
+namespace Server.Game
+{
+	public class GameRoom : JobSerializer
+	{
+		//게임룸 Id
+		public int RoomId { get; set; }
+
+		//게임룸 내에 존재하는 객체들을 dictionary 형태로 관리한다.
+		Dictionary<int, Player> _players = new Dictionary<int, Player>();
+		Dictionary<int, Monster> _monsters = new Dictionary<int, Monster>();
+		Dictionary<int, Projectile> _projectiles = new Dictionary<int, Projectile>();
+
+		//맵 데이터
+		public Map Map { get; private set; } = new Map();
+
+		//게임룸 초기화
+		public void Init(int mapId)
+		{
+			Map.LoadMap(mapId);
+
+			Monster monster = ObjectManager.Instance.Add<Monster>();
+			monster.CellPos = new Vector2Int(5, 5);
+			EnterGame(monster);
+		}
+	}
+}
+```
+
+
+- 서버가 지정한 프레임레이트에 맞게 Update()가 주기적으로 호출된다.
+- Update()에서는 게임룸 내 객체들의 상태를 업데이트하고, JobQueue 쌓인 작업(주로 패킷 처리)를 수행한다. 
+``` c#
+public void Update()
+{
+	//게임 내 객체 업데이트 처리
+	foreach (Monster monster in _monsters.Values)
+	{
+		monster.Update();
+	}
+
+	foreach (Projectile projectile in _projectiles.Values)
+	{
+		projectile.Update();
+	}
+
+	//JobQueue에 쌓인 Job을 순차적으로 실행한다.
+	Flush();
+}
+``` 
+
+
+- 게임룸에 추가되는 객체를 저장하고 모든 클라이언트 세션에게 그 내용을 통보한다.
+``` c#
+//게임 입장
+public void EnterGame(GameObject gameObject)
+{
+	if (gameObject == null)
+		return;
+
+	GameObjectType type = ObjectManager.GetObjectTypeById(gameObject.Id);
+
+	//플레이어일 경우
+	if (type == GameObjectType.Player)
+	{
+		Player player = gameObject as Player;
+		_players.Add(gameObject.Id, player);
+		player.Room = this;
+
+		Map.ApplyMove(player, new Vector2Int(player.CellPos.x, player.CellPos.y));
+
+		// 본인한테 정보 전송
+		{
+			S_EnterGame enterPacket = new S_EnterGame();
+			enterPacket.Player = player.Info;
+			player.Session.Send(enterPacket);
+
+			S_Spawn spawnPacket = new S_Spawn();
+			foreach (Player p in _players.Values)
+			{
+				if (player != p)
+					spawnPacket.Objects.Add(p.Info);
+			}
+
+			foreach (Monster m in _monsters.Values)
+				spawnPacket.Objects.Add(m.Info);
+
+			foreach (Projectile p in _projectiles.Values)
+				spawnPacket.Objects.Add(p.Info);
+
+			player.Session.Send(spawnPacket);
+		}
+	}
+	//몬스터 NPC일 경우
+	else if (type == GameObjectType.Monster)
+	{
+		Monster monster = gameObject as Monster;
+		_monsters.Add(gameObject.Id, monster);
+		monster.Room = this;
+
+		Map.ApplyMove(monster, new Vector2Int(monster.CellPos.x, monster.CellPos.y));
+	}
+	//투사체일 경우
+	else if (type == GameObjectType.Projectile)
+	{
+		Projectile projectile = gameObject as Projectile;
+		_projectiles.Add(gameObject.Id, projectile);
+		projectile.Room = this;
+	}
+	
+	// 타인한테 정보 전송
+	{
+		S_Spawn spawnPacket = new S_Spawn();
+		spawnPacket.Objects.Add(gameObject.Info);
+		foreach (Player p in _players.Values)
+		{
+			if (p.Id != gameObject.Id)
+				p.Session.Send(spawnPacket);
+		}
+	}
+}
+```
+
+
+- 게임룸에서 삭제 및 퇴장하는 객체를 해체하고 모든 클라이언트 세션에게 그 내용을 통보한다.
+``` c#
+//게임 퇴장
+public void LeaveGame(int objectId)
+{
+	GameObjectType type = ObjectManager.GetObjectTypeById(objectId);
+
+	if (type == GameObjectType.Player)
+	{
+		Player player = null;
+		if (_players.Remove(objectId, out player) == false)
+			return;
+
+		Map.ApplyLeave(player);
+		player.Room = null;
+
+		// 본인한테 정보 전송
+		{
+			S_LeaveGame leavePacket = new S_LeaveGame();
+			player.Session.Send(leavePacket);
+		}
+	}
+	else if (type == GameObjectType.Monster)
+	{
+		Monster monster = null;
+		if (_monsters.Remove(objectId, out monster) == false)
+			return;
+
+		Map.ApplyLeave(monster);
+		monster.Room = null;
+	}
+	else if (type == GameObjectType.Projectile)
+	{
+		Projectile projectile = null;
+		if (_projectiles.Remove(objectId, out projectile) == false)
+			return;
+
+		projectile.Room = null;
+	}
+
+	// 타인한테 정보 전송
+	{
+		S_Despawn despawnPacket = new S_Despawn();
+		despawnPacket.ObjectIds.Add(objectId);
+		foreach (Player p in _players.Values)
+		{
+			if (p.Id != objectId)
+				p.Session.Send(despawnPacket);
+		}
+	}
+}
+```
 # 플레이어 이동 동기화
 # 플레이어 스킬 처리
 # 플레이어 Hit 판정 처리
