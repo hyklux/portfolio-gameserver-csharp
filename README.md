@@ -24,6 +24,9 @@ C# 게임서버 포트폴리오입니다.
 :heavy_check_mark: 게임룸 입장 및 관리
 
 
+:heavy_check_mark: 맵
+
+
 :heavy_check_mark: 플레이어 이동 동기화
 
 
@@ -603,6 +606,9 @@ public void LeaveGame(int objectId)
 	}
 }
 ```
+
+
+# 맵 
 
 
 # 플레이어 이동 동기화
