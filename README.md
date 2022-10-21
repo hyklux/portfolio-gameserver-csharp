@@ -346,7 +346,9 @@ namespace Server.Data
 
 		public static void LoadData()
 		{
+			//스탯데이터 로드
 			StatDict = LoadJson<Data.StatData, int, StatInfo>("StatData").MakeDict();
+			//스킬데이터 로드
 			SkillDict = LoadJson<Data.SkillData, int, Data.Skill>("SkillData").MakeDict();
 		}
 
