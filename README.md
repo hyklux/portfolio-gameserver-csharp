@@ -77,6 +77,7 @@ namespace Server.Data
 
 # 세션 관리
 ### **SessionManager.cs**
+- (캡처 필요)
 - 접속된 클라이언트 세션 정보를 저장 및 관리한다.
 - 클라이언트가 서버에 접속하연 Generate()를 호출하여 전용 ClientSession 객체를 생성하고 SessionId를 부여한다.
 ``` c#
@@ -171,7 +172,8 @@ public override void OnDisconnected(EndPoint endPoint)
 	Console.WriteLine($"OnDisconnected : {endPoint}");
 }
 ```
-- 클라로부터 패킷을 수신/송신 시 처리가 정의되어 있다. 
+- 클라로부터 패킷을 수신/송신 시 처리가 정의되어 있다.
+- (추가 설명 필요) 패킷 변환 
 ``` c#
 public void Send(IMessage packet)
 {
@@ -195,6 +197,7 @@ public override void OnRecvPacket(ArraySegment<byte> buffer)
 
 # 패킷 처리
 ### **PacketManager.cs**
+- (캡처 필요)
 - 초기화 시 Register()를 호출하여 패킷 수신 시 처리해야 할 핸들러를 등록한다.
 ``` c#
 class PacketManager
@@ -225,6 +228,7 @@ class PacketManager
 }	
 ```
 - 패킷을 수신하면 특정 패킷에 맞는 핸들러를 찾아 실행한다. 
+- (추가 설명 필요) id, size 관련
 ``` c#
 public void OnRecvPacket(PacketSession session, ArraySegment<byte> buffer)
 {
@@ -283,52 +287,6 @@ class PacketHandler
 			return;
 
 		room.Push(room.HandleSkill, player, skillPacket);
-	}
-}
-```
-
-
-### **JobSerializer.cs**
-- 패킷 핸들러 처리는 서버 lock을 최소화 하기 위해 Command 패턴을 사용한다.
-``` c#
-namespace Server.Game
-{
-	//패킷 핸들러 처리는 서버 lock을 최소화 하기 위해 JobQueue 방식을 사용한다.
-	public class JobSerializer
-	{
-		JobTimer _timer = new JobTimer();
-		Queue<IJob> _jobQueue = new Queue<IJob>();
-		object _lock = new object();
-		bool _flush = false;
-
-		//...이하 생략
-	}
-}
-```
-- 핸들러를 Job으로 변환하여 _jobQueue 넣어준다.
-``` c#
-public void Push(IJob job)
-{
-	lock (_lock)
-	{
-		_jobQueue.Enqueue(job);
-	}
-}
-```
-- 게임룸에서 특정 시간 주기로 Tick이 발동되며 Flush를 호출한다.
-- Flush()에서 _jobQueue에 쌓여있는 것들을 차례로 실행한다.
-``` c#		
-public void Flush()
-{
-	_timer.Flush();
-
-	while (true)
-	{
-		IJob job = Pop();
-		if (job == null)
-			return;
-
-		job.Execute();
 	}
 }
 ```
@@ -609,6 +567,171 @@ public void LeaveGame(int objectId)
 
 
 # 맵 
+- (캡처 필요) 그리드 형태의 맵
+### **Map.cs**
+``` 
+public class Map
+{
+	public int MinX { get; set; }
+	public int MaxX { get; set; }
+	public int MinY { get; set; }
+	public int MaxY { get; set; }
+
+	public int SizeX { get { return MaxX - MinX + 1; } }
+	public int SizeY { get { return MaxY - MinY + 1; } }
+
+	bool[,] _collision;
+	GameObject[,] _objects;
+
+	public bool CanGo(Vector2Int cellPos, bool checkObjects = true)
+	{
+		if (cellPos.x < MinX || cellPos.x > MaxX)
+			return false;
+		if (cellPos.y < MinY || cellPos.y > MaxY)
+			return false;
+
+		int x = cellPos.x - MinX;
+		int y = MaxY - cellPos.y;
+		return !_collision[y, x] && (!checkObjects || _objects[y, x] == null);
+	}
+
+	public GameObject Find(Vector2Int cellPos)
+	{
+		if (cellPos.x < MinX || cellPos.x > MaxX)
+			return null;
+		if (cellPos.y < MinY || cellPos.y > MaxY)
+			return null;
+
+		int x = cellPos.x - MinX;
+		int y = MaxY - cellPos.y;
+		return _objects[y, x];
+	}
+
+	public bool ApplyLeave(GameObject gameObject)
+	{
+		if (gameObject.Room == null)
+			return false;
+		if (gameObject.Room.Map != this)
+			return false;
+
+		PositionInfo posInfo = gameObject.PosInfo;
+		if (posInfo.PosX < MinX || posInfo.PosX > MaxX)
+			return false;
+		if (posInfo.PosY < MinY || posInfo.PosY > MaxY)
+			return false;
+
+		{
+			int x = posInfo.PosX - MinX;
+			int y = MaxY - posInfo.PosY;
+			if (_objects[y, x] == gameObject)
+				_objects[y, x] = null;
+		}
+
+		return true;
+	}
+
+	public bool ApplyMove(GameObject gameObject, Vector2Int dest)
+	{
+		ApplyLeave(gameObject);
+
+		if (gameObject.Room == null)
+			return false;
+		if (gameObject.Room.Map != this)
+			return false;
+
+		PositionInfo posInfo = gameObject.PosInfo;
+		if (CanGo(dest, true) == false)
+			return false;
+
+		{
+			int x = dest.x - MinX;
+			int y = MaxY - dest.y;
+			_objects[y, x] = gameObject;
+		}
+
+		// 실제 좌표 이동
+		posInfo.PosX = dest.x;
+		posInfo.PosY = dest.y;
+		return true;
+	}
+
+	public void LoadMap(int mapId, string pathPrefix = "../../../../../Common/MapData")
+	{
+		string mapName = "Map_" + mapId.ToString("000");
+
+		// Collision 관련 파일
+		string text = File.ReadAllText($"{pathPrefix}/{mapName}.txt");
+		StringReader reader = new StringReader(text);
+
+		MinX = int.Parse(reader.ReadLine());
+		MaxX = int.Parse(reader.ReadLine());
+		MinY = int.Parse(reader.ReadLine());
+		MaxY = int.Parse(reader.ReadLine());
+
+		int xCount = MaxX - MinX + 1;
+		int yCount = MaxY - MinY + 1;
+		_collision = new bool[yCount, xCount];
+		_objects = new GameObject[yCount, xCount];
+
+		for (int y = 0; y < yCount; y++)
+		{
+			string line = reader.ReadLine();
+			for (int x = 0; x < xCount; x++)
+			{
+				_collision[y, x] = (line[x] == '1' ? true : false);
+			}
+		}
+	}
+}
+```
+
+# JobQueue 디자인 패턴 
+- (캡처 필요) 디자인 패턴 도식화
+### **JobSerializer.cs**
+- 패킷 핸들러 처리는 서버 lock을 최소화 하기 위해 Command 패턴을 사용한다.
+``` c#
+namespace Server.Game
+{
+	//패킷 핸들러 처리는 서버 lock을 최소화 하기 위해 JobQueue 방식을 사용한다.
+	public class JobSerializer
+	{
+		JobTimer _timer = new JobTimer();
+		Queue<IJob> _jobQueue = new Queue<IJob>();
+		object _lock = new object();
+		bool _flush = false;
+
+		//...이하 생략
+	}
+}
+```
+- 핸들러를 Job으로 변환하여 _jobQueue 넣어준다.
+``` c#
+public void Push(IJob job)
+{
+	lock (_lock)
+	{
+		_jobQueue.Enqueue(job);
+	}
+}
+```
+- 게임룸에서 특정 시간 주기로 Tick이 발동되며 Flush를 호출한다.
+- Flush()에서 _jobQueue에 쌓여있는 것들을 차례로 실행한다.
+``` c#		
+public void Flush()
+{
+	_timer.Flush();
+
+	while (true)
+	{
+		IJob job = Pop();
+		if (job == null)
+			return;
+
+		job.Execute();
+	}
+}
+```
+
 
 
 # 플레이어 이동 동기화
