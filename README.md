@@ -569,7 +569,7 @@ public void LeaveGame(int objectId)
 # 맵 
 - (캡처 필요) 그리드 형태의 맵
 ### **Map.cs**
-``` 
+``` c#
 public class Map
 {
 	public int MinX { get; set; }
