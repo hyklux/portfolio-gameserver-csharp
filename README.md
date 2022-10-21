@@ -7,6 +7,7 @@ C# 게임서버 포트폴리오입니다.
 
 게임룸에 입장한 모든 플레이어들의 이동 및 전투를 동기화 하는 게임서버입니다. 
 
+
 # 기능
 :heavy_check_mark: 서버 설정(Config) 관리
 
@@ -40,6 +41,7 @@ C# 게임서버 포트폴리오입니다.
 
 :heavy_check_mark: 적->플레이어 Skill AI
 
+
 # 게임 설정(Config) 관리
 - 설정과 관련된 정보를 Config.json로 작성한다.
 - 서버가 시작되면 LoadConfig()를 호출하여 Config 파일을 로드 후, ServerConfig 객체에 매핑한다.
@@ -68,6 +70,8 @@ namespace Server.Data
 	}
 }
 ```
+
+
 # 세션 관리
 ### **SessionManager.cs**
 - 접속된 클라이언트 세션 정보를 저장 및 관리한다.
@@ -184,6 +188,8 @@ public override void OnRecvPacket(ArraySegment<byte> buffer)
 	PacketManager.Instance.OnRecvPacket(this, buffer);
 }
 ```
+
+
 # 패킷 처리
 ### **PacketManager.cs**
 - 초기화 시 Register()를 호출하여 패킷 수신 시 처리해야 할 핸들러를 등록한다.
@@ -296,8 +302,6 @@ namespace Server.Game
 	}
 }
 ```
-
-
 - 핸들러를 Job으로 변환하여 _jobQueue 넣어준다.
 ``` c#
 public void Push(IJob job)
@@ -328,6 +332,8 @@ public void Flush()
 
 
 # 게임 데이터 관리
+
+
 ### **DataManager.cs**
 - 게임에 필요한 데이터 Dictionary 형태로 관리한다.
 - 게임 시작 시 json 파일을 읽어와 dictionary에 저장한다.
@@ -364,6 +370,8 @@ namespace Server.Data
 
 
 # 게임룸 입장 및 관리
+
+
 ### **RoomManager.cs**
 - 게임에 존재하는 게임룸을 관리한다.
 - 게임룸 생성, 해제, 특정 게임룸 검색 등의 기능을 수행한다.
@@ -453,8 +461,6 @@ namespace Server.Game
 	}
 }
 ```
-
-
 - 서버가 지정한 프레임레이트에 맞게 Update()가 주기적으로 호출된다.
 - Update()에서는 게임룸 내 객체들의 상태를 업데이트하고, JobQueue 쌓인 작업(주로 패킷 처리)를 수행한다. 
 ``` c#
@@ -475,8 +481,6 @@ public void Update()
 	Flush();
 }
 ``` 
-
-
 - 게임룸에 추가되는 객체를 저장하고 다른 클라이언트 세션에게 그 내용을 통보한다.
 ``` c#
 //게임 입장
@@ -547,8 +551,6 @@ public void EnterGame(GameObject gameObject)
 	}
 }
 ```
-
-
 - 게임룸에서 삭제 및 퇴장하는 객체를 해체하고 다른 클라이언트 세션에게 그 내용을 통보한다.
 ``` c#
 //게임 퇴장
@@ -601,9 +603,21 @@ public void LeaveGame(int objectId)
 	}
 }
 ```
+
+
 # 플레이어 이동 동기화
+
+
 # 플레이어 스킬 처리
+
+
 # 플레이어 Hit 판정 처리
+
+
 # 플레이어 Damage 처리
+
+
 # 적->플레이어 Search AI
+
+
 # 적->플레이어 Skill AI
