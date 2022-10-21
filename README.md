@@ -477,7 +477,7 @@ public void Update()
 ``` 
 
 
-- 게임룸에 추가되는 객체를 저장하고 모든 클라이언트 세션에게 그 내용을 통보한다.
+- 게임룸에 추가되는 객체를 저장하고 다른 클라이언트 세션에게 그 내용을 통보한다.
 ``` c#
 //게임 입장
 public void EnterGame(GameObject gameObject)
@@ -549,7 +549,7 @@ public void EnterGame(GameObject gameObject)
 ```
 
 
-- 게임룸에서 삭제 및 퇴장하는 객체를 해체하고 모든 클라이언트 세션에게 그 내용을 통보한다.
+- 게임룸에서 삭제 및 퇴장하는 객체를 해체하고 다른 클라이언트 세션에게 그 내용을 통보한다.
 ``` c#
 //게임 퇴장
 public void LeaveGame(int objectId)
