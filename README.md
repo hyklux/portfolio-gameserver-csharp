@@ -233,7 +233,7 @@ public void OnRecvPacket(PacketSession session, ArraySegment<byte> buffer)
 ```
 
 
-### ***PacketHandler.cs**
+### **PacketHandler.cs**
 - 각 컨텐츠 관련 패킷에 대한 실질적인 처리가 이루어지는 클래스이다.
 - C_MoveHandler는 플레이어 이동 패킷을 처리한다.
 - C_SkillHandler는 플레이어 스킬 발동 패킷을 처리한다.
