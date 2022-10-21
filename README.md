@@ -188,6 +188,147 @@ public override void OnRecvPacket(ArraySegment<byte> buffer)
 }
 ```
 ## 패킷 처리
+### **PacketManager.cs**
+- 초기화 시 Register()를 호출하여 패킷 수신 시 처리해야 할 핸드러를 등록한다.
+``` c#
+class PacketManager
+{
+	#region Singleton
+	static PacketManager _instance = new PacketManager();
+	public static PacketManager Instance { get { return _instance; } }
+	#endregion
+
+	PacketManager()
+	{
+		Register();
+	}
+
+	Dictionary<ushort, Action<PacketSession, ArraySegment<byte>, ushort>> _onRecv = new Dictionary<ushort, Action<PacketSession, ArraySegment<byte>, ushort>>();
+	Dictionary<ushort, Action<PacketSession, IMessage>> _handler = new Dictionary<ushort, Action<PacketSession, IMessage>>();
+		
+	public Action<PacketSession, IMessage, ushort> CustomHandler { get; set; }
+
+	//패킷 수신 시 처리해야 할 핸드러를 등록 
+	public void Register()
+	{		
+		_onRecv.Add((ushort)MsgId.CMove, MakePacket<C_Move>);
+		_handler.Add((ushort)MsgId.CMove, PacketHandler.C_MoveHandler);		
+		_onRecv.Add((ushort)MsgId.CSkill, MakePacket<C_Skill>);
+		_handler.Add((ushort)MsgId.CSkill, PacketHandler.C_SkillHandler);
+	}
+}	
+```
+- 패킷을 수신하면 특정 패킷에 맞는 핸드러를 찾아 실행한다. 
+``` c#
+public void OnRecvPacket(PacketSession session, ArraySegment<byte> buffer)
+{
+	ushort count = 0;
+
+	ushort size = BitConverter.ToUInt16(buffer.Array, buffer.Offset);
+	count += 2;
+	ushort id = BitConverter.ToUInt16(buffer.Array, buffer.Offset + count);
+	count += 2;
+
+	Action<PacketSession, ArraySegment<byte>, ushort> action = null;
+	if (_onRecv.TryGetValue(id, out action))
+		action.Invoke(session, buffer, id);
+}
+```
+
+
+### ***PacketHandler.cs**
+- 각 컨텐츠 관련 패킷에 대한 실질적인 처리가 이루어지는 클래스이다.
+- C_MoveHandler는 플레이어 이동 패킷을 처리한다.
+- C_SkillHandler는 플레이어 스킬 발동 패킷을 처리한다.
+``` c#
+class PacketHandler
+{
+	//플레이어 패킷 이동 패킷 처리 핸들러
+	public static void C_MoveHandler(PacketSession session, IMessage packet)
+	{
+		C_Move movePacket = packet as C_Move;
+		ClientSession clientSession = session as ClientSession;
+
+		//Console.WriteLine($"C_Move ({movePacket.PosInfo.PosX}, {movePacket.PosInfo.PosY})");
+
+		Player player = clientSession.MyPlayer;
+		if (player == null)
+			return;
+
+		GameRoom room = player.Room;
+		if (room == null)
+			return;
+
+		room.Push(room.HandleMove, player, movePacket);
+	}
+
+    //플레이어 스킬 발동 패킷 처리 핸들러
+    public static void C_SkillHandler(PacketSession session, IMessage packet)
+	{
+		C_Skill skillPacket = packet as C_Skill;
+		ClientSession clientSession = session as ClientSession;
+
+		Player player = clientSession.MyPlayer;
+		if (player == null)
+			return;
+
+		GameRoom room = player.Room;
+		if (room == null)
+			return;
+
+		room.Push(room.HandleSkill, player, skillPacket);
+	}
+}
+```
+
+
+### **JobSerializer.cs**
+- 패킷 핸들러 처리는 서버 lock을 최소화 하기 위해 Command 패턴을 사용한다.
+
+``` c#
+namespace Server.Game
+{
+	//패킷 핸들러 처리는 서버 lock을 최소화 하기 위해 JobQueue 방식을 사용한다.
+	public class JobSerializer
+	{
+		JobTimer _timer = new JobTimer();
+		Queue<IJob> _jobQueue = new Queue<IJob>();
+		object _lock = new object();
+		bool _flush = false;
+
+		//...이하 생략
+	}
+}
+```
+- 핸들러를 Job으로 변환하여 _jobQueue 넣어준다.
+``` c#
+public void Push(IJob job)
+{
+	lock (_lock)
+	{
+		_jobQueue.Enqueue(job);
+	}
+}
+```
+- 게임룸에서 특정 시간 주기로 Tick이 발동되며 이 함수를 호출한다.
+- _jobQueue에 쌓여있는 것들을 차례로 실행한다.
+``` c#		
+public void Flush()
+{
+	_timer.Flush();
+
+	while (true)
+	{
+		IJob job = Pop();
+		if (job == null)
+			return;
+
+		job.Execute();
+	}
+}
+```
+
+
 ## 게임 데이터 관리
 ## Job 관리
 ## 게임룸 입장 및 관리
