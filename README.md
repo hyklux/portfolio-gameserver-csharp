@@ -40,7 +40,7 @@ C# 게임서버 포트폴리오입니다.
 
 :heavy_check_mark: 적->플레이어 Skill AI
 
-## 게임 설정(Config) 관리
+# 게임 설정(Config) 관리
 - 설정과 관련된 정보를 Config.json로 작성한다.
 - 서버가 시작되면 LoadConfig()를 호출하여 Config 파일을 로드 후, ServerConfig 객체에 매핑한다.
 ``` c#
@@ -68,7 +68,7 @@ namespace Server.Data
 	}
 }
 ```
-## 세션 관리
+# 세션 관리
 ### **SessionManager.cs**
 - 접속된 클라이언트 세션 정보를 저장 및 관리한다.
 - 클라이언트가 서버에 접속하연 Generate()를 호출하여 전용 ClientSession 객체를 생성하고 SessionId를 부여한다.
@@ -184,7 +184,7 @@ public override void OnRecvPacket(ArraySegment<byte> buffer)
 	PacketManager.Instance.OnRecvPacket(this, buffer);
 }
 ```
-## 패킷 처리
+# 패킷 처리
 ### **PacketManager.cs**
 - 초기화 시 Register()를 호출하여 패킷 수신 시 처리해야 할 핸들러를 등록한다.
 ``` c#
@@ -326,7 +326,7 @@ public void Flush()
 ```
 
 
-## 게임 데이터 관리
+# 게임 데이터 관리
 ### **DataManager.cs**
 - 게임에 필요한 데이터 Dictionary 형태로 관리한다.
 - 게임 시작 시 json 파일을 읽어와 dictionary에 저장한다.
@@ -358,10 +358,10 @@ namespace Server.Data
 	}
 }
 ```
-## 게임룸 입장 및 관리
-## 플레이어 이동 동기화
-## 플레이어 스킬 처리
-## 플레이어 Hit 판정 처리
-## 플레이어 Damage 처리
-## 적->플레이어 Search AI
-## 적->플레이어 Skill AI
+# 게임룸 입장 및 관리
+# 플레이어 이동 동기화
+# 플레이어 스킬 처리
+# 플레이어 Hit 판정 처리
+# 플레이어 Damage 처리
+# 적->플레이어 Search AI
+# 적->플레이어 Skill AI
