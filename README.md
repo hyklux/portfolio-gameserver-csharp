@@ -49,27 +49,24 @@ C# 게임서버 포트폴리오입니다.
 - 설정과 관련된 정보를 Config.json로 작성한다.
 - 서버가 시작되면 LoadConfig()를 호출하여 Config 파일을 로드 후, ServerConfig 객체에 매핑한다.
 ``` c#
-namespace Server.Data
+//설정과 관련된 정보를 저장하는 클래스
+[Serializable]
+public class ServerConfig
 {
-	//설정과 관련된 정보를 저장하는 클래스
-	[Serializable]
-	public class ServerConfig
-	{
-		public string dataPath;
-		public string connectionIP;
-		public string connectionPort;
-	}
+	public string dataPath;
+	public string connectionIP;
+	public string connectionPort;
+}
 
-	public class ConfigManager
-	{
-		public static ServerConfig Config { get; private set; }
+public class ConfigManager
+{
+	public static ServerConfig Config { get; private set; }
 
-		//config.json파일을 로드하여 Config 객체에 매핑해 준다.
-		public static void LoadConfig()
-		{
-			string text = File.ReadAllText("config.json");
-			Config = Newtonsoft.Json.JsonConvert.DeserializeObject<ServerConfig>(text);
-		}
+	//config.json파일을 로드하여 Config 객체에 매핑해 준다.
+	public static void LoadConfig()
+	{
+		string text = File.ReadAllText("config.json");
+		Config = Newtonsoft.Json.JsonConvert.DeserializeObject<ServerConfig>(text);
 	}
 }
 ```
@@ -81,51 +78,45 @@ namespace Server.Data
 - 접속된 클라이언트 세션 정보를 저장 및 관리한다.
 - 클라이언트가 서버에 접속하연 Generate()를 호출하여 전용 ClientSession 객체를 생성하고 SessionId를 부여한다.
 ``` c#
-namespace Server
+class SessionManager
 {
-	class SessionManager
+	static SessionManager _session = new SessionManager();
+	public static SessionManager Instance { get { return _session; } }
+
+	object _lock = new object();
+	int _sessionId = 0;
+	
+	//접속된 모든 클라이언트 세션 관리
+	Dictionary<int, ClientSession> _sessions = new Dictionary<int, ClientSession>();
+
+	//클라이언트가 서버 접속 시 호출
+	public ClientSession Generate()
 	{
-		static SessionManager _session = new SessionManager();
-		public static SessionManager Instance { get { return _session; } }
-
-		object _lock = new object();
-		int _sessionId = 0;
-		
-		//접속된 모든 클라이언트 세션 관리
-		Dictionary<int, ClientSession> _sessions = new Dictionary<int, ClientSession>();
-
-		//클라이언트가 서버 접속 시 호출
-		public ClientSession Generate()
+		lock (_lock)
 		{
-			lock (_lock)
-			{
-				int sessionId = ++_sessionId;
+			int sessionId = ++_sessionId;
 
-				ClientSession session = new ClientSession();
-				session.SessionId = sessionId;
-				_sessions.Add(sessionId, session);
+			ClientSession session = new ClientSession();
+			session.SessionId = sessionId;
+			_sessions.Add(sessionId, session);
 
-				Console.WriteLine($"Connected : {sessionId}");
+			Console.WriteLine($"Connected : {sessionId}");
 
-				return session;
-			}
+			return session;
 		}
-		
-		//...이하 생략
 	}
+		
+	//...이하 생략
 }
 ```
 ### **ClientSession.cs**
 - ClientSession 클래스는 SessionId와 해당 플레이어의 정보를 갖고 있다.
 ``` c#
-namespace Server
-{	
-	public class ClientSession : PacketSession
-	{
-		public Player MyPlayer { get; set; }
-		public int SessionId { get; set; }
-	}
-	
+public class ClientSession : PacketSession
+{
+	public Player MyPlayer { get; set; }
+	public int SessionId { get; set; }
+
 	//...이하 생략
 }
 ```
@@ -134,29 +125,35 @@ namespace Server
 - 접속 해제 시 게임룸에서 퇴장시키며 ClientSession 객제도 더 이상 SessionManager에 의해 관리되지 않게 된다.
 ``` c#
 //접속 시 호출
-public override void OnConnected(EndPoint endPoint)
-{
-	Console.WriteLine($"OnConnected : {endPoint}");
-
-	//나의 플레이어 정보 생성
-	MyPlayer = ObjectManager.Instance.Add<Player>();
+namespace Server
+{	
+	public class ClientSession : PacketSession
 	{
-		MyPlayer.Info.Name = $"Player_{MyPlayer.Info.ObjectId}";
-		MyPlayer.Info.PosInfo.State = CreatureState.Idle;
-		MyPlayer.Info.PosInfo.MoveDir = MoveDir.Down;
-		MyPlayer.Info.PosInfo.PosX = 0;
-		MyPlayer.Info.PosInfo.PosY = 0;
+		public override void OnConnected(EndPoint endPoint)
+		{
+			Console.WriteLine($"OnConnected : {endPoint}");
 
-		StatInfo stat = null;
-		DataManager.StatDict.TryGetValue(1, out stat);
-		MyPlayer.Stat.MergeFrom(stat);
+			//나의 플레이어 정보 생성
+			MyPlayer = ObjectManager.Instance.Add<Player>();
+			{
+				MyPlayer.Info.Name = $"Player_{MyPlayer.Info.ObjectId}";
+				MyPlayer.Info.PosInfo.State = CreatureState.Idle;
+				MyPlayer.Info.PosInfo.MoveDir = MoveDir.Down;
+				MyPlayer.Info.PosInfo.PosX = 0;
+				MyPlayer.Info.PosInfo.PosY = 0;
 
-		MyPlayer.Session = this;
+				StatInfo stat = null;
+				DataManager.StatDict.TryGetValue(1, out stat);
+				MyPlayer.Stat.MergeFrom(stat);
+
+				MyPlayer.Session = this;
+			}
+
+			//게임룸 입장
+			GameRoom room = RoomManager.Instance.Find(1);
+			room.Push(room.EnterGame, MyPlayer);
+		}
 	}
-
-	//게임룸 입장
-	GameRoom room = RoomManager.Instance.Find(1);
-	room.Push(room.EnterGame, MyPlayer);
 }
 
 //접속 해제 시 호출
@@ -414,11 +411,9 @@ namespace Server.Game
 		public void Init(int mapId)
 		{
 			Map.LoadMap(mapId);
-
-			Monster monster = ObjectManager.Instance.Add<Monster>();
-			monster.CellPos = new Vector2Int(5, 5);
-			EnterGame(monster);
 		}
+		
+		//...이하 생략
 	}
 }
 ```
@@ -442,7 +437,7 @@ public void Update()
 	Flush();
 }
 ``` 
-- 게임룸에 추가되는 객체를 저장하고 다른 클라이언트 세션에게 그 내용을 통보한다.
+- EnterGame(GameObject gameObject) 함수로 게임룸에 추가되는 객체를 저장하고 다른 클라이언트 세션에게 그 내용을 통보한다.
 ``` c#
 //게임 입장
 public void EnterGame(GameObject gameObject)
@@ -512,7 +507,7 @@ public void EnterGame(GameObject gameObject)
 	}
 }
 ```
-- 게임룸에서 삭제 및 퇴장하는 객체를 해체하고 다른 클라이언트 세션에게 그 내용을 통보한다.
+- LeaveGame(int objectId) 함수를 통해 게임룸에서 삭제 및 퇴장하는 객체를 해체하고 다른 클라이언트 세션에게 그 내용을 통보한다.
 ``` c#
 //게임 퇴장
 public void LeaveGame(int objectId)
