@@ -83,9 +83,11 @@ namespace Server
 		static SessionManager _session = new SessionManager();
 		public static SessionManager Instance { get { return _session; } }
 
-		int _sessionId = 0;
-		Dictionary<int, ClientSession> _sessions = new Dictionary<int, ClientSession>();
 		object _lock = new object();
+		int _sessionId = 0;
+		
+		//접속된 모든 클라이언트 세션 관리
+		Dictionary<int, ClientSession> _sessions = new Dictionary<int, ClientSession>();
 
 		//클라이언트가 서버 접속 시 호출
 		public ClientSession Generate()
