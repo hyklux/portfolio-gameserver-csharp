@@ -472,26 +472,24 @@ public class GameRoom : JobSerializer
 			Map.ApplyMove(player, new Vector2Int(player.CellPos.x, player.CellPos.y));
 
 			// 본인한테 정보 전송
+			S_EnterGame enterPacket = new S_EnterGame();
+			enterPacket.Player = player.Info;
+			player.Session.Send(enterPacket);
+
+			S_Spawn spawnPacket = new S_Spawn();
+			foreach (Player p in _players.Values)
 			{
-				S_EnterGame enterPacket = new S_EnterGame();
-				enterPacket.Player = player.Info;
-				player.Session.Send(enterPacket);
-
-				S_Spawn spawnPacket = new S_Spawn();
-				foreach (Player p in _players.Values)
-				{
-					if (player != p)
-						spawnPacket.Objects.Add(p.Info);
-				}
-
-				foreach (Monster m in _monsters.Values)
-					spawnPacket.Objects.Add(m.Info);
-
-				foreach (Projectile p in _projectiles.Values)
+				if (player != p)
 					spawnPacket.Objects.Add(p.Info);
-
-				player.Session.Send(spawnPacket);
 			}
+
+			foreach (Monster m in _monsters.Values)
+				spawnPacket.Objects.Add(m.Info);
+
+			foreach (Projectile p in _projectiles.Values)
+				spawnPacket.Objects.Add(p.Info);
+
+			player.Session.Send(spawnPacket);
 		}
 		//몬스터 NPC일 경우
 		else if (type == GameObjectType.Monster)
@@ -587,7 +585,7 @@ public class GameRoom : JobSerializer
 
 
 # 맵 
-- (캡처 필요) 그리드 형태의 맵
+(캡처 필요) 그리드 형태의 맵
 ### **Map.cs**
 - 맵은 2d 그리드 형태로 Map 객체는 맵에 대한 모든 데이터를 담고 있다.
 - Map 객체는 맵의 최소/최대 좌표, 맵의 크기, 장애물들에 대한 정보를 갖고 있다.
@@ -753,7 +751,8 @@ public class JobSerializer
 ```
 
 
-# 플레이어 이동 
+# 플레이어 이동
+(캡쳐 필요)
 ### **GameRoom.cs**
 - 클라이언트 세션으로부터 C_Move 패킷을 받으면 해당 플레이어에 대한 이동을 처리한다.
 - 목표 좌표로 이동 가능한지 검사한 후 이동 시킨 후, 이동 결과를 다른 클라이언트 세션에 통보해 동기화 시킨다.
@@ -795,6 +794,7 @@ public class GameRoom : JobSerializer
 
 
 # 플레이어 스킬 발동 및 판정 처리
+(캡쳐 필요)
 ### **GameRoom.cs**
 - 클라이언트 세션으로부터 C_Skill 패킷을 받으면 해당 플레이어에 대한 스킬 처리를 수행한다.
 - 스킬이 발동되었다는 것을 다른 클라이언트 세션에 통보한다.
@@ -816,6 +816,8 @@ public class GameRoom : JobSerializer
 			return;
 
 		info.PosInfo.State = CreatureState.Skill;
+		
+		//다른 클라이언트 세션에 스킬 발동 통보
 		S_Skill skill = new S_Skill() { Info = new SkillInfo() };
 		skill.ObjectId = info.ObjectId;
 		skill.Info.SkillId = skillPacket.Info.SkillId;
@@ -870,7 +872,7 @@ public class GameRoom : JobSerializer
 - Player도 GameObject의 자식 클래스로 여기서 데미지 차감 처리, 사망 처리가 이루어진다.
 - OnDamaged 함수에서 데미지 처리를, 만약 HP가 0이하가 되면 OnDead 함수에서 사망 처리를 이어서 수행한다.
 - 데미지 처리, 사망 처리에서 각각 다른 클라이언트 세션에게 해당 내용을 통보한다. 
-```
+``` c#
 public class GameObject
 {
 	//...(중략)
@@ -883,6 +885,7 @@ public class GameObject
 
 		Stat.Hp = Math.Max(Stat.Hp - damage, 0);
 
+		//다른 클라이언트 세션에  통보
 		S_ChangeHp changePacket = new S_ChangeHp();
 		changePacket.ObjectId = Id;
 		changePacket.Hp = Stat.Hp;
@@ -901,6 +904,7 @@ public class GameObject
 		if (Room == null)
 			return;
 
+		//다른 클라이언트 세션에 사망 통보
 		S_Die diePacket = new S_Die();
 		diePacket.ObjectId = Id;
 		diePacket.AttackerId = attacker.Id;
