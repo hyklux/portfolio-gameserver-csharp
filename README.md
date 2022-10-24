@@ -33,10 +33,10 @@ C# 게임서버 포트폴리오입니다.
 :heavy_check_mark: 플레이어 스킬 발동 및 판정 처리
 
 
-:heavy_check_mark: 적->플레이어 Search AI
+:heavy_check_mark: 몬스터 NPC -> 플레이어 Search AI
 
 
-:heavy_check_mark: 적->플레이어 Skill AI
+:heavy_check_mark: 몬스터 NPC -> 플레이어 Skill AI
 
 
 # 게임 설정(Config) 관리
@@ -920,7 +920,245 @@ public class GameObject
 ```
 
 
-# 적->플레이어 Search AI
+# 몬스터 NPC -> 플레이어 Search AI
+(캡쳐 필요)
+### **Monster.cs**
+- 몬스터 NPC AI는 FSM (Finite State Machine)으로 구현되어 있다.
+- 정해진 프레임마다 Update()가 호출되며 현재 State에 따른 행동을 수행한다.
+``` c#
+public class Monster : GameObject
+{
+	public Monster()
+	{
+		ObjectType = GameObjectType.Monster;
+	
+		Stat.Level = 1;
+		Stat.Hp = 100;
+		Stat.MaxHp = 100;
+		Stat.Speed = 5.0f;
+	
+		State = CreatureState.Idle;
+	}
+	
+	// FSM (Finite State Machine)
+	public override void Update()
+	{
+		switch (State)
+		{
+			case CreatureState.Idle:
+				UpdateIdle();
+				break;
+			case CreatureState.Moving:
+				UpdateMoving();
+				break;
+			case CreatureState.Skill:
+				UpdateSkill();
+				break;
+			case CreatureState.Dead:
+				UpdateDead();
+				break;
+		}
+	}
+	
+	//...(중략)
+}
+```
+- Idle 상태에서는 정해진 범위 내에 플레이어가 있는지 탐색한다.
+- 플레이어를 발견하면, 추적해야할 target으로 지정하고 몬스터의 상태가 Idle에서 Moving으로 업데이트 된다.
+``` c#
+public class Monster : GameObject
+{
+	//...(중략)
+		
+	Player _target;
+	int _searchCellDist = 10;
+	int _chaseCellDist = 20;
+	
+	protected virtual void UpdateIdle()
+	{
+		if (_nextSearchTick > Environment.TickCount64)
+			return;
+			
+		_nextSearchTick = Environment.TickCount64 + 1000;
+
+		//탐색 범위(_searchCellDist)에 플레이어가 있으면 target으로 설정
+		Player target = Room.FindPlayer(p =>
+		{
+			Vector2Int dir = p.CellPos - CellPos;
+			return dir.cellDistFromZero <= _searchCellDist;
+		});
+
+		if (target == null)
+			return;
+
+		_target = target;
+		
+		//target 있으면 Moving으로 상태 변화
+		State = CreatureState.Moving;
+	}
+	
+	//...(중략)
+}
+```
+- 최적의 Map.cs의 FindPath() 함수로 최적의 경로를 탐색한 후, 그 경로를 따라 이동한다.
+- 플레이어가 너무 멀어지거나 방에서 퇴장하는 등의 예외 상황에 주의하며, 예외 처리를 꼼꼼히 해주어야 한다.
+``` c#
+public class Monster : GameObject
+{
+	//...(중략)
+	
+	int _skillRange = 1;
+	long _nextMoveTick = 0;
+	protected virtual void UpdateMoving()
+	{
+		if (_nextMoveTick > Environment.TickCount64)
+			return;
+		int moveTick = (int)(1000 / Speed);
+		_nextMoveTick = Environment.TickCount64 + moveTick;
+
+		//target이 유효한지 확인
+		if (_target == null || _target.Room != Room)
+		{
+			_target = null;
+			State = CreatureState.Idle;
+			BroadcastMove();
+			return;
+		}
+
+		Vector2Int dir = _target.CellPos - CellPos;
+		int dist = dir.cellDistFromZero;
+		if (dist == 0 || dist > _chaseCellDist)
+		{
+			_target = null;
+			State = CreatureState.Idle;
+			BroadcastMove();
+			return;
+		}
+
+		//최단 경로 탐색(A* 알고리즘 기반) 
+		List<Vector2Int> path = Room.Map.FindPath(CellPos, _target.CellPos, checkObjects: false);
+		if (path.Count < 2 || path.Count > _chaseCellDist)
+		{
+			_target = null;
+			State = CreatureState.Idle;
+			BroadcastMove();
+			return;
+		}
+
+		// 스킬로 넘어갈지 체크
+		if (dist <= _skillRange && (dir.x == 0 || dir.y == 0))
+		{
+			_coolTick = 0;
+			State = CreatureState.Skill;
+			return;
+		}
+
+		// 이동
+		Dir = GetDirFromVec(path[1] - CellPos);
+		Room.Map.ApplyMove(this, path[1]);
+		BroadcastMove();
+	}
+	
+	//...(중략)
+}
+```
+- 최적 경로 탐색은 A* 알고리즘을 기반으로 구현되어 있다.
+``` c#
+public class Map
+{
+	//...(중략)
+
+	// U D L R
+	int[] _deltaY = new int[] { 1, -1, 0, 0 };
+	int[] _deltaX = new int[] { 0, 0, -1, 1 };
+	int[] _cost = new int[] { 10, 10, 10, 10 };
+
+	public List<Vector2Int> FindPath(Vector2Int startCellPos, Vector2Int destCellPos, bool checkObjects = true)
+	{
+		List<Pos> path = new List<Pos>();
+
+		// 점수 매기기
+		// F = G + H
+		// F = 최종 점수 (작을 수록 좋음, 경로에 따라 달라짐)
+		// G = 시작점에서 해당 좌표까지 이동하는데 드는 비용 (작을 수록 좋음, 경로에 따라 달라짐)
+		// H = 목적지에서 얼마나 가까운지 (작을 수록 좋음, 고정)
+
+		// (y, x) 이미 방문했는지 여부 (방문 = closed 상태)
+		bool[,] closed = new bool[SizeY, SizeX]; // CloseList
+
+		// (y, x) 가는 길을 한 번이라도 발견했는지
+		// 발견X => MaxValue
+		// 발견O => F = G + H
+		int[,] open = new int[SizeY, SizeX]; // OpenList
+		for (int y = 0; y < SizeY; y++)
+			for (int x = 0; x < SizeX; x++)
+				open[y, x] = Int32.MaxValue;
+
+		Pos[,] parent = new Pos[SizeY, SizeX];
+
+		// 오픈리스트에 있는 정보들 중에서, 가장 좋은 후보를 빠르게 뽑아오기 위한 도구
+		PriorityQueue<PQNode> pq = new PriorityQueue<PQNode>();
+
+		// CellPos -> ArrayPos
+		Pos pos = Cell2Pos(startCellPos);
+		Pos dest = Cell2Pos(destCellPos);
+
+		// 시작점 발견 (예약 진행)
+		open[pos.Y, pos.X] = 10 * (Math.Abs(dest.Y - pos.Y) + Math.Abs(dest.X - pos.X));
+		pq.Push(new PQNode() { F = 10 * (Math.Abs(dest.Y - pos.Y) + Math.Abs(dest.X - pos.X)), G = 0, Y = pos.Y, X = pos.X });
+		parent[pos.Y, pos.X] = new Pos(pos.Y, pos.X);
+
+		while (pq.Count > 0)
+		{
+			// 제일 좋은 후보를 찾는다
+			PQNode node = pq.Pop();
+			// 동일한 좌표를 여러 경로로 찾아서, 더 빠른 경로로 인해서 이미 방문(closed)된 경우 스킵
+			if (closed[node.Y, node.X])
+				continue;
+
+			// 방문한다
+			closed[node.Y, node.X] = true;
+			// 목적지 도착했으면 바로 종료
+			if (node.Y == dest.Y && node.X == dest.X)
+				break;
+
+			// 상하좌우 등 이동할 수 있는 좌표인지 확인해서 예약(open)한다
+			for (int i = 0; i < _deltaY.Length; i++)
+			{
+				Pos next = new Pos(node.Y + _deltaY[i], node.X + _deltaX[i]);
+
+				// 유효 범위를 벗어났으면 스킵
+				// 벽으로 막혀서 갈 수 없으면 스킵
+				if (next.Y != dest.Y || next.X != dest.X)
+				{
+					if (CanGo(Pos2Cell(next), checkObjects) == false) // CellPos
+						continue;
+				}
+
+				// 이미 방문한 곳이면 스킵
+				if (closed[next.Y, next.X])
+					continue;
+
+				// 비용 계산
+				int g = 0;// node.G + _cost[i];
+				int h = 10 * ((dest.Y - next.Y) * (dest.Y - next.Y) + (dest.X - next.X) * (dest.X - next.X));
+				// 다른 경로에서 더 빠른 길 이미 찾았으면 스킵
+				if (open[next.Y, next.X] < g + h)
+					continue;
+
+				// 예약 진행
+				open[dest.Y, dest.X] = g + h;
+				pq.Push(new PQNode() { F = g + h, G = g, Y = next.Y, X = next.X });
+				parent[next.Y, next.X] = new Pos(node.Y, node.X);
+			}
+		}
+
+		return CalcCellPathFromParent(parent, dest);
+	}
+	
+	//...(중략)
+}
+```
 
 
-# 적->플레이어 Skill AI
+# 몬스터 NPC -> 플레이어 Skill AI
