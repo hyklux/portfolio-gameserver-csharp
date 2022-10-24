@@ -68,7 +68,7 @@ public class ConfigManager
 
 # 세션 관리
 ### **SessionManager.cs**
-- (캡처 필요)
+(캡처 필요)
 - 접속된 클라이언트 세션 정보를 저장 및 관리한다.
 - 클라이언트가 서버에 접속하연 Generate()를 호출하여 전용 ClientSession 객체를 생성하고 SessionId를 부여한다.
 ``` c#
@@ -196,7 +196,7 @@ public class ClientSession : PacketSession
 
 # 패킷 처리
 ### **PacketManager.cs**
-- (캡처 필요)
+(캡처 필요)
 - 초기화 시 Register()를 호출하여 패킷 수신 시 처리해야 할 핸들러를 등록한다.
 ``` c#
 class PacketManager
@@ -509,14 +509,12 @@ public class GameRoom : JobSerializer
 		}
 	
 		// 타인한테 정보 전송
+		S_Spawn spawnPacket = new S_Spawn();
+		spawnPacket.Objects.Add(gameObject.Info);
+		foreach (Player p in _players.Values)
 		{
-			S_Spawn spawnPacket = new S_Spawn();
-			spawnPacket.Objects.Add(gameObject.Info);
-			foreach (Player p in _players.Values)
-			{
-				if (p.Id != gameObject.Id)
-					p.Session.Send(spawnPacket);
-			}
+			if (p.Id != gameObject.Id)
+				p.Session.Send(spawnPacket);
 		}
 	}
 	
@@ -544,10 +542,8 @@ public class GameRoom : JobSerializer
 			player.Room = null;
 
 			// 본인한테 정보 전송
-			{
-				S_LeaveGame leavePacket = new S_LeaveGame();
-				player.Session.Send(leavePacket);
-			}
+			S_LeaveGame leavePacket = new S_LeaveGame();
+			player.Session.Send(leavePacket);
 		}
 		else if (type == GameObjectType.Monster)
 		{
