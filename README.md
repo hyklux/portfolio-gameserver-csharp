@@ -33,10 +33,10 @@ C# 게임서버 포트폴리오입니다.
 :heavy_check_mark: 플레이어 스킬 발동 및 판정 처리
 
 
-:heavy_check_mark: 몬스터 NPC -> 플레이어 Search AI
+:heavy_check_mark: NPC->플레이어 Search AI
 
 
-:heavy_check_mark: 몬스터 NPC -> 플레이어 Skill AI
+:heavy_check_mark: NPC->플레이어 Skill AI
 
 
 # 게임 설정(Config) 관리
@@ -916,7 +916,7 @@ public class GameObject
 ```
 
 
-# 몬스터 NPC -> 플레이어 Search AI
+# NPC->플레이어 Search AI
 (캡쳐 필요)
 ### **Monster.cs**
 - 몬스터 NPC AI는 FSM (Finite State Machine)으로 구현되어 있다.
@@ -1157,7 +1157,7 @@ public class Map
 ```
 
 
-# 몬스터 NPC -> 플레이어 Skill AI
+# NPC->플레이어 Skill AI
 ### **Monster.cs**
 - 몬스터 NPC가 플레이어를 추척하고 따라와 스킬을 쓸 수 있을 만큼 따라잡으면, 상태를 Skill로 업데이트 한다.
 - UpdateSkill() 함수에서 플레이어를 대상으로 스킬을 발동한다.
