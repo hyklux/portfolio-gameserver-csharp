@@ -27,7 +27,7 @@ C# 게임서버 포트폴리오입니다.
 :heavy_check_mark: 맵
 
 
-:heavy_check_mark: 플레이어 이동 동기화
+:heavy_check_mark: 플레이어 이동 
 
 
 :heavy_check_mark: 플레이어 스킬 처리
@@ -759,11 +759,112 @@ public class JobSerializer
 ```
 
 
-# 플레이어 이동 동기화
+# 플레이어 이동 
+### **GameRoom.cs**
+- 클라이언트 세션으로부터 C_Move 패킷을 받으면 해당 플레이어에 대한 이동을 처리한다.
+- 목표 좌표로 이동 가능한지 검사한 후 이동 시킨 후, 이동 결과를 다른 클라이언트 세션에 통보해 동기화 시킨다.
+``` c#
+public class GameRoom : JobSerializer
+{
+	//...(중략)
+	
+	//이동 처리
+	public void HandleMove(Player player, C_Move movePacket)
+	{
+		if (player == null)
+			return;
+
+		PositionInfo movePosInfo = movePacket.PosInfo;
+		ObjectInfo info = player.Info;
+
+		// 다른 좌표로 이동할 경우, 갈 수 있는지 체크
+		if (movePosInfo.PosX != info.PosInfo.PosX || movePosInfo.PosY != info.PosInfo.PosY)
+		{
+			if (Map.CanGo(new Vector2Int(movePosInfo.PosX, movePosInfo.PosY)) == false)
+				return;
+		}
+
+		info.PosInfo.State = movePosInfo.State;
+		info.PosInfo.MoveDir = movePosInfo.MoveDir;
+		Map.ApplyMove(player, new Vector2Int(movePosInfo.PosX, movePosInfo.PosY));
+
+		// 다른 플레이어한테도 브로드캐스팅하여 동기화
+		S_Move resMovePacket = new S_Move();
+		resMovePacket.ObjectId = player.Info.ObjectId;
+		resMovePacket.PosInfo = movePacket.PosInfo;
+		Broadcast(resMovePacket);
+	}
+	
+	//...(중략)
+}
+```
 
 
 # 플레이어 스킬 처리
+### **GameRoom.cs**
+- 클라이언트 세션으로부터 C_Skill 패킷을 받으면 해당 플레이어에 대한 스킬 처리를 수행한다.
+- 스킬 타입에 맞게 정의된 처리를 해준다.
+- 근접 공격의 경우 바로 피격 판정 처리를 진행하지만, 투사체 공격의 경우 투사체를 생성만 해주고 실제 피격 처리는 투사체의 로직에서 처리한다.
+``` c#
+public class GameRoom : JobSerializer
+{
+	//...(중략)
+	
+	//스킬 처리
+	public void HandleSkill(Player player, C_Skill skillPacket)
+	{
+		if (player == null)
+			return;
 
+		ObjectInfo info = player.Info;
+		if (info.PosInfo.State != CreatureState.Idle)
+			return;
+
+		info.PosInfo.State = CreatureState.Skill;
+		S_Skill skill = new S_Skill() { Info = new SkillInfo() };
+		skill.ObjectId = info.ObjectId;
+		skill.Info.SkillId = skillPacket.Info.SkillId;
+		Broadcast(skill);
+
+		Data.Skill skillData = null;
+		if (DataManager.SkillDict.TryGetValue(skillPacket.Info.SkillId, out skillData) == false)
+			return;
+
+		//근접 스킬, 투사체 스킬 등 스킬타입에 따라 다르게 처리한다.
+		switch (skillData.skillType)
+		{
+			case SkillType.SkillAuto: //일반 근접 공격
+				{
+					Vector2Int skillPos = player.GetFrontCellPos(info.PosInfo.MoveDir);
+					GameObject target = Map.Find(skillPos);
+					if (target != null)
+					{
+						Console.WriteLine("Hit GameObject !");
+					}
+				}
+				break;
+			case SkillType.SkillProjectile: //원거리 화살 공격
+				{
+					Arrow arrow = ObjectManager.Instance.Add<Arrow>();
+					if (arrow == null)
+						return;
+
+					arrow.Owner = player;
+					arrow.Data = skillData;
+					arrow.PosInfo.State = CreatureState.Moving;
+					arrow.PosInfo.MoveDir = player.PosInfo.MoveDir;
+					arrow.PosInfo.PosX = player.PosInfo.PosX;
+					arrow.PosInfo.PosY = player.PosInfo.PosY;
+					arrow.Speed = skillData.projectile.speed;
+					Push(EnterGame, arrow);
+				}
+				break;
+		}
+	}
+	
+	//...(중략)
+}
+```
 
 # 플레이어 Hit 판정 처리
 
