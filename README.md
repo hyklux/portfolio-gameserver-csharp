@@ -715,6 +715,26 @@ public class JobSerializer
 }
 ```
 - 게임룸에서 특정 시간 주기로 Tick이 발동되며 Flush를 호출한다.
+``` c#
+class Program
+{
+	static Listener _listener = new Listener();
+	static List<System.Timers.Timer> _timers = new List<System.Timers.Timer>();
+
+	static void TickRoom(GameRoom room, int tick = 100)
+	{
+		var timer = new System.Timers.Timer();
+		timer.Interval = tick;
+		timer.Elapsed += ((s, e) => { room.Update(); });
+		timer.AutoReset = true;
+		timer.Enabled = true;
+
+		_timers.Add(timer);
+	}
+	
+	//...(중략)
+}
+```
 - Flush()에서 _jobQueue에 쌓여있는 것들을 차례로 실행한다.
 ``` c#	
 public class JobSerializer
