@@ -30,13 +30,7 @@ C# 게임서버 포트폴리오입니다.
 :heavy_check_mark: 플레이어 이동 
 
 
-:heavy_check_mark: 플레이어 스킬 처리
-
-
-:heavy_check_mark: 플레이어 Hit 판정 처리
-
-
-:heavy_check_mark: 플레이어 Damage 처리
+:heavy_check_mark: 플레이어 스킬 발동 및 판정 처리
 
 
 :heavy_check_mark: 적->플레이어 Search AI
@@ -800,9 +794,10 @@ public class GameRoom : JobSerializer
 ```
 
 
-# 플레이어 스킬 처리
+# 플레이어 스킬 발동 및 판정 처리
 ### **GameRoom.cs**
 - 클라이언트 세션으로부터 C_Skill 패킷을 받으면 해당 플레이어에 대한 스킬 처리를 수행한다.
+- 스킬이 발동되었다는 것을 다른 클라이언트 세션에 통보한다.
 - 스킬 타입에 맞게 정의된 처리를 해준다.
 - 근접 공격의 경우 바로 피격 판정 처리를 진행하지만, 투사체 공격의 경우 투사체를 생성만 해주고 실제 피격 처리는 투사체의 로직에서 처리한다.
 ``` c#
@@ -837,14 +832,17 @@ public class GameRoom : JobSerializer
 				{
 					Vector2Int skillPos = player.GetFrontCellPos(info.PosInfo.MoveDir);
 					GameObject target = Map.Find(skillPos);
+					//근접 공격은 바로 피격 처리
 					if (target != null)
 					{
 						Console.WriteLine("Hit GameObject !");
+						target.OnDamaged(player, player.Stat.Attack);
 					}
 				}
 				break;
 			case SkillType.SkillProjectile: //원거리 화살 공격
 				{
+					//화살 공격은 화살 투사체만 생성 해주고, 화살 로직에서 충돌 및 피격처리를 한다.
 					Arrow arrow = ObjectManager.Instance.Add<Arrow>();
 					if (arrow == null)
 						return;
@@ -866,10 +864,56 @@ public class GameRoom : JobSerializer
 }
 ```
 
-# 플레이어 Hit 판정 처리
 
+### **GameObject.cs**
+- GameObject는 게임 내 존재하는 모든 오브젝트의 상위 클래스이다.
+- Player도 GameObject의 자식 클래스로 여기서 데미지 차감 처리, 사망 처리가 이루어진다.
+- OnDamaged 함수에서 데미지 처리를, 만약 HP가 0이하가 되면 OnDead 함수에서 사망 처리를 이어서 수행한다.
+- 데미지 처리, 사망 처리에서 각각 다른 클라이언트 세션에게 해당 내용을 통보한다. 
+```
+public class GameObject
+{
+	//...(중략)
+	
+	//데미지 처리
+	public virtual void OnDamaged(GameObject attacker, int damage)
+	{
+		if (Room == null)
+			return;
 
-# 플레이어 Damage 처리
+		Stat.Hp = Math.Max(Stat.Hp - damage, 0);
+
+		S_ChangeHp changePacket = new S_ChangeHp();
+		changePacket.ObjectId = Id;
+		changePacket.Hp = Stat.Hp;
+		Room.Broadcast(changePacket);
+
+		//HP가 0이하가 되면 사망 처리를 위해 OnDead를 호출한다.
+		if (Stat.Hp <= 0)
+		{
+			OnDead(attacker);
+		}
+	}
+
+	//사망 처리
+	public virtual void OnDead(GameObject attacker)
+	{
+		if (Room == null)
+			return;
+
+		S_Die diePacket = new S_Die();
+		diePacket.ObjectId = Id;
+		diePacket.AttackerId = attacker.Id;
+		Room.Broadcast(diePacket);
+
+		//사망 처리되면 플레이어를 게임룸에서 퇴장시킨다.
+		GameRoom room = Room;
+		room.LeaveGame(Id);
+	}
+	
+	//...(중략)
+}
+```
 
 
 # 적->플레이어 Search AI
