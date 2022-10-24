@@ -340,7 +340,6 @@ public class DataManager
 	
 	//...(중략)
 }
-}
 ```
 
 
