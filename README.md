@@ -457,12 +457,11 @@ public class GameRoom : JobSerializer
 ``` 
 - EnterGame(GameObject gameObject) 함수로 게임룸에 추가되는 객체를 저장하고 다른 클라이언트 세션에게 그 내용을 통보한다.
 ``` c#
-//게임 입장
-
 public class GameRoom : JobSerializer
 {
 	//...(중략)
 	
+	//게임 입장
 	public void EnterGame(GameObject gameObject)
 	{
 		if (gameObject == null)
@@ -535,60 +534,62 @@ public class GameRoom : JobSerializer
 ```
 - LeaveGame(int objectId) 함수를 통해 게임룸에서 삭제 및 퇴장하는 객체를 해체하고 다른 클라이언트 세션에게 그 내용을 통보한다.
 ``` c#
-
-//...(중략)
-
-//게임 퇴장
-public void LeaveGame(int objectId)
+public class GameRoom : JobSerializer
 {
-	GameObjectType type = ObjectManager.GetObjectTypeById(objectId);
+	//...(중략)
 
-	if (type == GameObjectType.Player)
+	//게임 퇴장
+	public void LeaveGame(int objectId)
 	{
-		Player player = null;
-		if (_players.Remove(objectId, out player) == false)
-			return;
+		GameObjectType type = ObjectManager.GetObjectTypeById(objectId);
 
-		Map.ApplyLeave(player);
-		player.Room = null;
-
-		// 본인한테 정보 전송
+		if (type == GameObjectType.Player)
 		{
-			S_LeaveGame leavePacket = new S_LeaveGame();
-			player.Session.Send(leavePacket);
+			Player player = null;
+			if (_players.Remove(objectId, out player) == false)
+				return;
+
+			Map.ApplyLeave(player);
+			player.Room = null;
+
+			// 본인한테 정보 전송
+			{
+				S_LeaveGame leavePacket = new S_LeaveGame();
+				player.Session.Send(leavePacket);
+			}
+		}
+		else if (type == GameObjectType.Monster)
+		{
+			Monster monster = null;
+			if (_monsters.Remove(objectId, out monster) == false)
+				return;
+
+			Map.ApplyLeave(monster);
+			monster.Room = null;
+		}
+		else if (type == GameObjectType.Projectile)
+		{
+			Projectile projectile = null;
+			if (_projectiles.Remove(objectId, out projectile) == false)
+				return;
+
+			projectile.Room = null;
+		}
+
+		// 타인한테 정보 전송
+		{
+			S_Despawn despawnPacket = new S_Despawn();
+			despawnPacket.ObjectIds.Add(objectId);
+			foreach (Player p in _players.Values)
+			{
+				if (p.Id != objectId)
+					p.Session.Send(despawnPacket);
+			}
 		}
 	}
-	else if (type == GameObjectType.Monster)
-	{
-		Monster monster = null;
-		if (_monsters.Remove(objectId, out monster) == false)
-			return;
 
-		Map.ApplyLeave(monster);
-		monster.Room = null;
-	}
-	else if (type == GameObjectType.Projectile)
-	{
-		Projectile projectile = null;
-		if (_projectiles.Remove(objectId, out projectile) == false)
-			return;
-
-		projectile.Room = null;
-	}
-
-	// 타인한테 정보 전송
-	{
-		S_Despawn despawnPacket = new S_Despawn();
-		despawnPacket.ObjectIds.Add(objectId);
-		foreach (Player p in _players.Values)
-		{
-			if (p.Id != objectId)
-				p.Session.Send(despawnPacket);
-		}
-	}
+	//...(중략)
 }
-
-//...(중략)
 ```
 
 
