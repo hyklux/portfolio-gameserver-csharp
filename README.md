@@ -116,7 +116,7 @@ public class ClientSession : PacketSession
 ```
 - 서버에 접속/접속해제 시 처리가 정의되어 있습니다.
 - 생성 직후 OnConnected(EndPoint endPoint)를 호출하여 나의 플레이어 정보가 생성되고 게임룸에 입장합니다.
-- 접속 해제 시 OnDisconnected(EndPoint endPoint) 호출을 통해 게임룸에서 퇴장시키며 ClientSession 객제도 더 이상 SessionManager에 의해 관리되지 않게 됩니다.
+- 접속 해제 시 OnDisconnected(EndPoint endPoint) 호출을 통해 게임룸에서 퇴장시키며 ClientSession 객체도 더 이상 SessionManager에 의해 관리되지 않게 됩니다.
 ``` c#
 public class ClientSession : PacketSession
 {
