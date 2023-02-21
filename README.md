@@ -1,8 +1,8 @@
 # portfolio-gameserver-csharp
-C# 게임서버 포트폴리오
+C# MMO 게임서버 포트폴리오
 
 # 소개
-C# 게임서버 포트폴리오입니다.
+C# MMO 게임서버 포트폴리오입니다.
 
 
 게임룸에 입장한 모든 플레이어들의 이동 및 전투를 동기화 하는 게임서버입니다. 
@@ -40,8 +40,8 @@ C# 게임서버 포트폴리오입니다.
 
 
 # 게임 설정(Config) 관리
-- 설정과 관련된 정보를 Config.json로 작성한다.
-- 서버가 시작되면 LoadConfig()를 호출하여 Config 파일을 로드 후, ServerConfig 객체에 매핑한다.
+- 설정과 관련된 정보를 Config.json로 작성합니다.
+- 서버가 시작되면 LoadConfig()를 호출하여 Config 파일을 로드 후, ServerConfig 객체에 매핑합니다.
 ``` c#
 //설정과 관련된 정보를 저장하는 클래스
 [Serializable]
@@ -69,8 +69,8 @@ public class ConfigManager
 # 세션 관리
 ### **SessionManager.cs**
 (캡처 필요)
-- 접속된 클라이언트 세션 정보를 저장 및 관리한다.
-- 클라이언트가 서버에 접속하연 Generate()를 호출하여 전용 ClientSession 객체를 생성하고 SessionId를 부여한다.
+- 접속된 클라이언트 세션 정보를 저장 및 관리합니다.
+- 클라이언트가 서버에 접속하연 Generate()를 호출하여 전용 ClientSession 객체를 생성하고 SessionId를 부여합니다.
 ``` c#
 class SessionManager
 {
@@ -114,9 +114,9 @@ public class ClientSession : PacketSession
 	//...(중략)
 }
 ```
-- 서버에 접속/접속해제 시 처리가 정의되어 있다.
-- 생성 직후 OnConnected(EndPoint endPoint)를 호출하여 나의 플레이어 정보가 생성되고 게임룸에 입장한다.
-- 접속 해제 시 OnDisconnected(EndPoint endPoint) 호출을 통해 게임룸에서 퇴장시키며 ClientSession 객제도 더 이상 SessionManager에 의해 관리되지 않게 된다.
+- 서버에 접속/접속해제 시 처리가 정의되어 있습니다.
+- 생성 직후 OnConnected(EndPoint endPoint)를 호출하여 나의 플레이어 정보가 생성되고 게임룸에 입장합니다.
+- 접속 해제 시 OnDisconnected(EndPoint endPoint) 호출을 통해 게임룸에서 퇴장시키며 ClientSession 객제도 더 이상 SessionManager에 의해 관리되지 않게 됩니다.
 ``` c#
 public class ClientSession : PacketSession
 {
@@ -164,7 +164,7 @@ public class ClientSession : PacketSession
 	//...(중략)
 }
 ```
-- 클라로부터 패킷을 수신/송신 시 처리가 정의되어 있다.
+- 클라로부터 패킷을 수신/송신 시 처리가 정의되어 있습니다.
 - (추가 설명 필요) 패킷 변환 
 ``` c#
 public class ClientSession : PacketSession
@@ -197,7 +197,7 @@ public class ClientSession : PacketSession
 # 패킷 처리
 ### **PacketManager.cs**
 (캡처 필요)
-- 초기화 시 Register()를 호출하여 패킷 수신 시 처리해야 할 핸들러를 등록한다.
+- 초기화 시 Register()를 호출하여 패킷 수신 시 처리해야 할 핸들러를 등록합니다.
 ``` c#
 class PacketManager
 {
@@ -228,7 +228,7 @@ class PacketManager
 	//...(중략)
 }	
 ```
-- 패킷을 수신하면 특정 패킷에 맞는 핸들러를 찾아 실행한다. 
+- 패킷을 수신하면 특정 패킷에 맞는 핸들러를 찾아 실행합니다. 
 - (추가 설명 필요) id, size 관련
 ``` c#
 class PacketManager
@@ -255,9 +255,9 @@ class PacketManager
 
 
 ### **PacketHandler.cs**
-- 각 컨텐츠 관련 패킷에 대한 실질적인 처리가 이루어지는 클래스이다.
-- C_MoveHandler는 플레이어 이동 패킷을 처리한다.
-- C_SkillHandler는 플레이어 스킬 발동 패킷을 처리한다.
+- 각 컨텐츠 관련 패킷에 대한 실질적인 처리가 이루어지는 클래스입니다.
+- C_MoveHandler는 플레이어 이동 패킷을 처리합니다.
+- C_SkillHandler는 플레이어 스킬 발동 패킷을 처리합니다.
 ``` c#
 class PacketHandler
 {
@@ -304,8 +304,8 @@ class PacketHandler
 
 
 ### **DataManager.cs**
-- 게임에 필요한 데이터 Dictionary 형태로 관리한다.
-- 게임 시작 시 json 파일을 읽어와 dictionary에 저장한다.
+- 게임에 필요한 데이터 Dictionary 형태로 관리합니다.
+- 게임 시작 시 json 파일을 읽어와 dictionary에 저장합니다.
 ``` c#
 public interface ILoader<Key, Value>
 {
@@ -341,8 +341,8 @@ public class DataManager
 
 
 ### **RoomManager.cs**
-- 게임에 존재하는 게임룸을 관리한다.
-- 게임룸 생성, 해제, 특정 게임룸 검색 등의 기능을 수행한다.
+- 게임에 존재하는 게임룸을 관리합니다.
+- 게임룸 생성, 해제, 특정 게임룸 검색 등의 기능을 수행합니다.
 ``` c#
 public class RoomManager
 {
@@ -395,9 +395,9 @@ public class RoomManager
 
 
 ### **GameRoom.cs**
-- 게임룸 객체로 게임룸Id, 맵데이터, 게임룸 내에 존재하는 다양한 객체를 관리한다.
-- 초기화 시 특정 맵Id에 해당하는 맵데이터를 로드한다.
-- 플레이어의 이동 동기화, 스킬 처리, 판정 처리 등 게임룸 내에서 이루어지는 행위를 실질적으로 처리하는 객체이다.
+- 게임룸 객체로 게임룸Id, 맵데이터, 게임룸 내에 존재하는 다양한 객체를 관리합니다.
+- 초기화 시 특정 맵Id에 해당하는 맵데이터를 로드합니다.
+- 플레이어의 이동 동기화, 스킬 처리, 판정 처리 등 게임룸 내에서 이루어지는 행위를 실질적으로 처리하는 객체입니다.
 ``` c#
 public class GameRoom : JobSerializer
 {
@@ -421,8 +421,8 @@ public class GameRoom : JobSerializer
 	//...이하 생략
 }
 ```
-- 서버가 지정한 프레임레이트에 맞게 Update()가 주기적으로 호출된다.
-- Update()에서는 게임룸 내 객체들의 상태를 업데이트하고, JobQueue 쌓인 작업(주로 패킷 처리)를 수행한다. 
+- 서버가 지정한 프레임레이트에 맞게 Update()가 주기적으로 호출됩니다.
+- Update()에서는 게임룸 내 객체들의 상태를 업데이트하고, JobQueue 쌓인 작업(주로 패킷 처리)를 수행합니다. 
 ``` c#
 public class GameRoom : JobSerializer
 {
@@ -448,7 +448,7 @@ public class GameRoom : JobSerializer
 	//...(중략)
 }
 ``` 
-- EnterGame(GameObject gameObject) 함수로 게임룸에 추가되는 객체를 저장하고 다른 클라이언트 세션에게 그 내용을 통보한다.
+- EnterGame(GameObject gameObject) 함수로 게임룸에 추가되는 객체를 저장하고 다른 클라이언트 세션에게 그 내용을 통보합니다.
 ``` c#
 public class GameRoom : JobSerializer
 {
@@ -521,7 +521,7 @@ public class GameRoom : JobSerializer
 	//...(중략)
 }
 ```
-- LeaveGame(int objectId) 함수를 통해 게임룸에서 삭제 및 퇴장하는 객체를 해체하고 다른 클라이언트 세션에게 그 내용을 통보한다.
+- LeaveGame(int objectId) 함수를 통해 게임룸에서 삭제 및 퇴장하는 객체를 해체하고 다른 클라이언트 세션에게 그 내용을 통보합니다.
 ``` c#
 public class GameRoom : JobSerializer
 {
@@ -583,9 +583,9 @@ public class GameRoom : JobSerializer
 # 맵 
 (캡처 필요) 그리드 형태의 맵
 ### **Map.cs**
-- 맵은 2d 그리드 형태로 Map 객체는 맵에 대한 모든 데이터를 담고 있다.
-- Map 객체는 맵의 최소/최대 좌표, 맵의 크기, 장애물들에 대한 정보를 갖고 있다.
-- ApplyMove()를 호출하여 캐릭터를 현재 좌표에서 목표 좌표로 이동시킨다.
+- 맵은 2d 그리드 형태로 Map 객체는 맵에 대한 모든 데이터를 담고 있습니다.
+- Map 객체는 맵의 최소/최대 좌표, 맵의 크기, 장애물들에 대한 정보를 갖고 있습니다.
+- ApplyMove()를 호출하여 캐릭터를 현재 좌표에서 목표 좌표로 이동시킵니다.
 ``` c#
 public class Map
 {
@@ -671,9 +671,9 @@ public class Map
 # JobQueue 디자인 패턴 
 - (캡처 필요) 디자인 패턴 도식화
 ### **JobSerializer.cs**
-- 패킷 핸들러 처리는 서버 lock을 최소화 하기 위해 Command 패턴을 사용한다.
+- 패킷 핸들러 처리는 서버 lock을 최소화 하기 위해 Command 패턴을 사용합니다.
 ``` c#
-//패킷 핸들러 처리는 서버 lock을 최소화 하기 위해 JobQueue 방식을 사용한다.
+//패킷 핸들러 처리는 서버 lock을 최소화 하기 위해 JobQueue 방식을 사용합니다.
 public class JobSerializer
 {
 	JobTimer _timer = new JobTimer();
@@ -684,7 +684,7 @@ public class JobSerializer
 	//...(중략)
 }
 ```
-- 핸들러를 Job으로 변환하여 _jobQueue에 넣어준다.
+- 핸들러를 Job으로 변환하여 _jobQueue에 넣어줍니다.
 ``` c#
 public class JobSerializer
 {
@@ -701,7 +701,7 @@ public class JobSerializer
 	//...(중략)
 }
 ```
-- 게임룸에서 특정 시간 주기로 Tick이 발동되며 Flush를 호출한다.
+- 게임룸에서 특정 시간 주기로 Tick이 발동되며 Flush를 호출합니다.
 ``` c#
 class Program
 {
@@ -722,7 +722,7 @@ class Program
 	//...(중략)
 }
 ```
-- Flush()에서 _jobQueue에 쌓여있는 것들을 차례로 실행한다.
+- Flush()에서 _jobQueue에 쌓여있는 것들을 차례로 실행합니다.
 ``` c#	
 public class JobSerializer
 {
@@ -750,8 +750,8 @@ public class JobSerializer
 # 플레이어 이동
 (캡쳐 필요)
 ### **GameRoom.cs**
-- 클라이언트 세션으로부터 C_Move 패킷을 받으면 해당 플레이어에 대한 이동을 처리한다.
-- 목표 좌표로 이동 가능한지 검사한 후 이동 시킨 후, 이동 결과를 다른 클라이언트 세션에 통보해 동기화 시킨다.
+- 클라이언트 세션으로부터 C_Move 패킷을 받으면 해당 플레이어에 대한 이동을 처리합니다.
+- 목표 좌표로 이동 가능한지 검사한 후 이동 시킨 후, 이동 결과를 다른 클라이언트 세션에 통보해 동기화 시킵니다.
 ``` c#
 public class GameRoom : JobSerializer
 {
@@ -792,10 +792,10 @@ public class GameRoom : JobSerializer
 # 플레이어 스킬 발동 및 판정 처리
 (캡쳐 필요)
 ### **GameRoom.cs**
-- 클라이언트 세션으로부터 C_Skill 패킷을 받으면 해당 플레이어에 대한 스킬 처리를 수행한다.
-- 스킬이 발동되었다는 것을 다른 클라이언트 세션에 통보한다.
-- 스킬 타입에 맞게 정의된 처리를 해준다.
-- 근접 공격의 경우 바로 피격 판정 처리를 진행하지만, 투사체 공격의 경우 투사체를 생성만 해주고 실제 피격 처리는 투사체의 로직에서 처리한다.
+- 클라이언트 세션으로부터 C_Skill 패킷을 받으면 해당 플레이어에 대한 스킬 처리를 수행합니다.
+- 스킬이 발동되었다는 것을 다른 클라이언트 세션에 통보합니다.
+- 스킬 타입에 맞게 정의된 처리를 해줍니다.
+- 근접 공격의 경우 바로 피격 판정 처리를 진행하지만, 투사체 공격의 경우 투사체를 생성만 해주고 실제 피격 처리는 투사체의 로직에서 처리합니다.
 ``` c#
 public class GameRoom : JobSerializer
 {
@@ -864,10 +864,10 @@ public class GameRoom : JobSerializer
 
 
 ### **GameObject.cs**
-- GameObject는 게임 내 존재하는 모든 오브젝트의 상위 클래스이다.
-- Player도 GameObject의 자식 클래스로 여기서 데미지 차감 처리, 사망 처리가 이루어진다.
-- OnDamaged 함수에서 데미지 처리를, 만약 HP가 0이하가 되면 OnDead 함수에서 사망 처리를 이어서 수행한다.
-- 데미지 처리, 사망 처리에서 각각 다른 클라이언트 세션에게 해당 내용을 통보한다. 
+- GameObject는 게임 내 존재하는 모든 오브젝트의 상위 클래스입니다.
+- Player도 GameObject의 자식 클래스로 여기서 데미지 차감 처리, 사망 처리가 이루어집니다.
+- OnDamaged 함수에서 데미지 처리를, 만약 HP가 0이하가 되면 OnDead 함수에서 사망 처리를 이어서 수행합니다.
+- 데미지 처리, 사망 처리에서 각각 다른 클라이언트 세션에게 해당 내용을 통보합니다. 
 ``` c#
 public class GameObject
 {
@@ -919,8 +919,8 @@ public class GameObject
 # NPC->플레이어 Search AI
 (캡쳐 필요)
 ### **Monster.cs**
-- 몬스터 NPC AI는 FSM (Finite State Machine)으로 구현되어 있다.
-- 정해진 프레임마다 Update()가 호출되며 현재 State에 따른 행동을 수행한다.
+- 몬스터 NPC AI는 FSM (Finite State Machine)으로 구현되어 있습니다.
+- 정해진 프레임마다 Update()가 호출되며 현재 State에 따른 행동을 수행합니다.
 ``` c#
 public class Monster : GameObject
 {
@@ -959,8 +959,8 @@ public class Monster : GameObject
 	//...(중략)
 }
 ```
-- Idle 상태에서는 정해진 범위 내에 플레이어가 있는지 탐색한다.
-- 플레이어를 발견하면, 추적해야할 target으로 지정하고 몬스터의 상태가 Idle에서 Moving으로 업데이트 된다.
+- Idle 상태에서는 정해진 범위 내에 플레이어가 있는지 탐색합니다.
+- 플레이어를 발견하면, 추적해야할 target으로 지정하고 몬스터의 상태가 Idle에서 Moving으로 업데이트 됩니다.
 ``` c#
 public class Monster : GameObject
 {
@@ -996,8 +996,8 @@ public class Monster : GameObject
 	//...(중략)
 }
 ```
-- 최적의 Map.cs의 FindPath() 함수로 최적의 경로를 탐색한 후, 그 경로를 따라 이동한다.
-- 플레이어가 너무 멀어지거나 방에서 퇴장하는 등의 예외 상황에 주의하며, 예외 처리를 꼼꼼히 해주어야 한다.
+- 최적의 Map.cs의 FindPath() 함수로 최적의 경로를 탐색한 후, 그 경로를 따라 이동합니다.
+- 플레이어가 너무 멀어지거나 방에서 퇴장하는 등의 예외 상황에 주의하며, 예외 처리를 꼼꼼히 해주어야 합니다.
 ``` c#
 public class Monster : GameObject
 {
@@ -1058,7 +1058,7 @@ public class Monster : GameObject
 	//...(중략)
 }
 ```
-- 최적 경로 탐색은 A* 알고리즘을 기반으로 구현되어 있다.
+- 최적 경로 탐색은 A* 알고리즘을 기반으로 구현되어 있습니다.
 ``` c#
 public class Map
 {
@@ -1159,8 +1159,8 @@ public class Map
 
 # NPC->플레이어 Skill AI
 ### **Monster.cs**
-- 몬스터 NPC가 플레이어를 추척하고 따라와 스킬을 쓸 수 있을 만큼 따라잡으면, 상태를 Skill로 업데이트 한다.
-- UpdateSkill() 함수에서 플레이어를 대상으로 스킬을 발동한다.
+- 몬스터 NPC가 플레이어를 추척하고 따라와 스킬을 쓸 수 있을 만큼 따라잡으면, 상태를 Skill로 업데이트 합니다.
+- UpdateSkill() 함수에서 플레이어를 대상으로 스킬을 발동합니다.
 ``` c#
 public class Monster : GameObject
 {
