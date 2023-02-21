@@ -104,7 +104,7 @@ class SessionManager
 }
 ```
 ### **ClientSession.cs**
-- ClientSession 클래스는 SessionId와 해당 플레이어의 정보를 갖고 있다.
+- ClientSession 클래스는 SessionId와 해당 플레이어의 정보를 갖고 있습니다.
 ``` c#
 public class ClientSession : PacketSession
 {
