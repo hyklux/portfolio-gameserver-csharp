@@ -1,14 +1,14 @@
 # portfolio-gameserver-csharp
-C# MMO 게임서버 포트폴리오
+2d action game server implemented using C#
 
-# 소개
-C# MMO 게임서버 포트폴리오입니다.
+# Introduction
+This is 2d action game server implemented using C#
 
 
 게임룸에 입장한 모든 플레이어들의 이동 및 전투를 동기화 하는 게임서버입니다. 
 
 
-# 기능
+# Implementations
 :heavy_check_mark: 서버 설정(Config) 관리
 
 
