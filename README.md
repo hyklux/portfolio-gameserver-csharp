@@ -1,8 +1,8 @@
 # portfolio-gameserver-csharp
-2d action game server implemented using C#
+2D action game server implemented using C#
 
 # Introduction
-This is 2d action game server implemented using C#
+This is 2D action game server implemented using C#
 
 
 게임룸에 입장한 모든 플레이어들의 이동 및 전투를 동기화 하는 게임서버입니다. 
