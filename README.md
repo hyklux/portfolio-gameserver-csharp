@@ -5,45 +5,44 @@
 This is 2D action game server implemented using C#
 
 
-게임룸에 입장한 모든 플레이어들의 이동 및 전투를 동기화 하는 게임서버입니다. 
+It is a game server that synchronizes the movement and battle of all players who have entered the game room.
 
 
 # Implementations
-:heavy_check_mark: 서버 설정(Config) 관리
+:heavy_check_mark: Server configuration management
 
 
-:heavy_check_mark: 세션 관리
+:heavy_check_mark: Session management
 
 
-:heavy_check_mark: 패킷 처리
+:heavy_check_mark: Packet processing
 
 
-:heavy_check_mark: 데이터 관리
+:heavy_check_mark: Data management
 
 
-:heavy_check_mark: 게임룸 입장 및 관리
+:heavy_check_mark: Game room management
 
 
-:heavy_check_mark: 맵
+:heavy_check_mark: Map
 
 
-:heavy_check_mark: 플레이어 이동 
+:heavy_check_mark: Player movement 
 
 
-:heavy_check_mark: 플레이어 스킬 발동 및 판정 처리
+:heavy_check_mark: Player combat
 
 
-:heavy_check_mark: NPC->플레이어 Search AI
+:heavy_check_mark: NPC AI - Search player
 
 
-:heavy_check_mark: NPC->플레이어 Skill AI
+:heavy_check_mark: NPC AI - Combat
 
 
-# 게임 설정(Config) 관리
-- 설정과 관련된 정보를 Config.json로 작성합니다.
-- 서버가 시작되면 LoadConfig()를 호출하여 Config 파일을 로드 후, ServerConfig 객체에 매핑합니다.
+# Server configuration management
+- Write configuration-related information as Config.json.
+- When the server starts, LoadConfig() is called to load the config file and map it to the ServerConfig object.
 ``` c#
-//설정과 관련된 정보를 저장하는 클래스
 [Serializable]
 public class ServerConfig
 {
@@ -56,7 +55,7 @@ public class ConfigManager
 {
 	public static ServerConfig Config { get; private set; }
 
-	//config.json파일을 로드하여 Config 객체에 매핑해 준다.
+	//Load config.json file and map it to Config object.
 	public static void LoadConfig()
 	{
 		string text = File.ReadAllText("config.json");
@@ -66,11 +65,10 @@ public class ConfigManager
 ```
 
 
-# 세션 관리
+# Session management
 ### **SessionManager.cs**
-(캡처 필요)
-- 접속된 클라이언트 세션 정보를 저장 및 관리합니다.
-- 클라이언트가 서버에 접속하연 Generate()를 호출하여 전용 ClientSession 객체를 생성하고 SessionId를 부여합니다.
+- Stores and manages connected client session information.
+- When a client connects to the server, Generate() is called to create a dedicated ClientSession object and give it a SessionId.
 ``` c#
 class SessionManager
 {
@@ -80,10 +78,10 @@ class SessionManager
 	object _lock = new object();
 	int _sessionId = 0;
 	
-	//접속된 모든 클라이언트 세션 관리
+	//Stores all connected client sessions
 	Dictionary<int, ClientSession> _sessions = new Dictionary<int, ClientSession>();
 
-	//클라이언트가 서버 접속 시 호출
+	//Called when client connects to server
 	public ClientSession Generate()
 	{
 		lock (_lock)
@@ -100,34 +98,34 @@ class SessionManager
 		}
 	}
 		
-	//...(중략)
+	//...(omitted)
 }
 ```
 ### **ClientSession.cs**
-- ClientSession 클래스는 SessionId와 해당 플레이어의 정보를 갖고 있습니다.
+- The ClientSession class holds the SessionId and information about the player.
 ``` c#
 public class ClientSession : PacketSession
 {
 	public Player MyPlayer { get; set; }
 	public int SessionId { get; set; }
 
-	//...(중략)
+	//...(omitted)
 }
 ```
-- 서버에 접속/접속해제 시 처리가 정의되어 있습니다.
-- 생성 직후 OnConnected(EndPoint endPoint)를 호출하여 나의 플레이어 정보가 생성되고 게임룸에 입장합니다.
-- 접속 해제 시 OnDisconnected(EndPoint endPoint) 호출을 통해 게임룸에서 퇴장시키며 ClientSession 객체도 더 이상 SessionManager에 의해 관리되지 않게 됩니다.
+- Processing is defined when connecting/disconnecting from the server.
+- Right after creation, I call OnConnected(EndPoint endPoint) to create my player information and enter the game room.
+- When disconnected, OnDisconnected(EndPoint endPoint) is called to exit the game room, and the ClientSession object is no longer managed by the SessionManager.
 ``` c#
 public class ClientSession : PacketSession
 {
-	//...(중략)
+	//...(omitted)
 	
-	//접속 시 호출
+	//Called when connected
 	public override void OnConnected(EndPoint endPoint)
 	{
 		Console.WriteLine($"OnConnected : {endPoint}");
 
-		//나의 플레이어 정보 생성
+		//Create my player info
 		MyPlayer = ObjectManager.Instance.Add<Player>();
 		{
 			MyPlayer.Info.Name = $"Player_{MyPlayer.Info.ObjectId}";
@@ -143,33 +141,32 @@ public class ClientSession : PacketSession
 			MyPlayer.Session = this;
 		}
 
-		//게임룸 입장
+		//Enter game room
 		GameRoom room = RoomManager.Instance.Find(1);
 		room.Push(room.EnterGame, MyPlayer);
 	}
 		
-	//접속 해제 시 호출
+	//Called when disconnected
 	public override void OnDisconnected(EndPoint endPoint)
 	{
-		//게임룸 퇴장
+		//Exit game room
 		GameRoom room = RoomManager.Instance.Find(1);
 		room.Push(room.LeaveGame, MyPlayer.Info.ObjectId);
 
-		//세션매니저에서 해제
+		//Removes from session manager
 		SessionManager.Instance.Remove(this);
 
 		Console.WriteLine($"OnDisconnected : {endPoint}");
 	}
 	
-	//...(중략)
+	//...(omitted)
 }
 ```
-- 클라로부터 패킷을 수신/송신 시 처리가 정의되어 있습니다.
-- (추가 설명 필요) 패킷 변환 
+- Processing is defined when receiving/transmitting packets from the release client in the session manager.
 ``` c#
 public class ClientSession : PacketSession
 {
-	//...(중략)
+	//...(omitted)
 	
 	public void Send(IMessage packet)
 	{
@@ -189,12 +186,12 @@ public class ClientSession : PacketSession
 		PacketManager.Instance.OnRecvPacket(this, buffer);
 	}
 	
-	//...(중략)
+	//...(omitted)
 }
 ```
 
 
-# 패킷 처리
+# Packet processing
 ### **PacketManager.cs**
 (캡처 필요)
 - 초기화 시 Register()를 호출하여 패킷 수신 시 처리해야 할 핸들러를 등록합니다.
