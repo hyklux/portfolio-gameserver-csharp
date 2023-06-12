@@ -27,6 +27,9 @@ It is a game server that synchronizes the movement and battle of all players who
 :heavy_check_mark: Map
 
 
+:heavy_check_mark: JobQueue
+
+
 :heavy_check_mark: Player movement 
 
 
@@ -299,8 +302,8 @@ class PacketHandler
 
 
 ### **DataManager.cs**
-- 게임에 필요한 데이터 Dictionary 형태로 관리합니다.
-- 게임 시작 시 json 파일을 읽어와 dictionary에 저장합니다.
+- Data necessary for the game is managed in a dictionary.
+- When the game starts, the json file is read and stored in the dictionary.
 ``` c#
 public interface ILoader<Key, Value>
 {
@@ -309,15 +312,14 @@ public interface ILoader<Key, Value>
 
 public class DataManager
 {
-	//데이터는 Dictionary 형태로 관리
 	public static Dictionary<int, StatInfo> StatDict { get; private set; } = new Dictionary<int, StatInfo>();
 	public static Dictionary<int, Data.Skill> SkillDict { get; private set; } = new Dictionary<int, Data.Skill>();
 
 	public static void LoadData()
 	{
-		//스탯데이터 로드
+		//Loads stat data
 		StatDict = LoadJson<Data.StatData, int, StatInfo>("StatData").MakeDict();
-		//스킬데이터 로드
+		//Loads skill data
 		SkillDict = LoadJson<Data.SkillData, int, Data.Skill>("SkillData").MakeDict();
 	}
 
@@ -396,18 +398,14 @@ public class RoomManager
 ``` c#
 public class GameRoom : JobSerializer
 {
-	//게임룸 Id
 	public int RoomId { get; set; }
 
-	//게임룸 내에 존재하는 객체들을 dictionary 형태로 관리한다.
 	Dictionary<int, Player> _players = new Dictionary<int, Player>();
 	Dictionary<int, Monster> _monsters = new Dictionary<int, Monster>();
 	Dictionary<int, Projectile> _projectiles = new Dictionary<int, Projectile>();
 
-	//맵 데이터
 	public Map Map { get; private set; } = new Map();
 
-	//게임룸 초기화
 	public void Init(int mapId)
 	{
 		Map.LoadMap(mapId);
@@ -416,8 +414,8 @@ public class GameRoom : JobSerializer
 	//...이하 생략
 }
 ```
-- 서버가 지정한 프레임레이트에 맞게 Update()가 주기적으로 호출됩니다.
-- Update()에서는 게임룸 내 객체들의 상태를 업데이트하고, JobQueue 쌓인 작업(주로 패킷 처리)를 수행합니다. 
+- Update() is called periodically according to the frame rate specified by the server.
+- Update() updates the state of objects in the game room and performs tasks (mainly packet processing) stacked in the JobQueue.
 ``` c#
 public class GameRoom : JobSerializer
 {
@@ -443,13 +441,12 @@ public class GameRoom : JobSerializer
 	//...(중략)
 }
 ``` 
-- EnterGame(GameObject gameObject) 함수로 게임룸에 추가되는 객체를 저장하고 다른 클라이언트 세션에게 그 내용을 통보합니다.
+- The EnterGame(GameObject gameObject) function saves objects that are added to the game room and notifies other client sessions.
 ``` c#
 public class GameRoom : JobSerializer
 {
 	//...(중략)
 	
-	//게임 입장
 	public void EnterGame(GameObject gameObject)
 	{
 		if (gameObject == null)
@@ -457,7 +454,6 @@ public class GameRoom : JobSerializer
 
 		GameObjectType type = ObjectManager.GetObjectTypeById(gameObject.Id);
 
-		//플레이어일 경우
 		if (type == GameObjectType.Player)
 		{
 			Player player = gameObject as Player;
@@ -466,7 +462,6 @@ public class GameRoom : JobSerializer
 
 			Map.ApplyMove(player, new Vector2Int(player.CellPos.x, player.CellPos.y));
 
-			// 본인한테 정보 전송
 			S_EnterGame enterPacket = new S_EnterGame();
 			enterPacket.Player = player.Info;
 			player.Session.Send(enterPacket);
@@ -486,7 +481,6 @@ public class GameRoom : JobSerializer
 
 			player.Session.Send(spawnPacket);
 		}
-		//몬스터 NPC일 경우
 		else if (type == GameObjectType.Monster)
 		{
 			Monster monster = gameObject as Monster;
@@ -495,7 +489,6 @@ public class GameRoom : JobSerializer
 
 			Map.ApplyMove(monster, new Vector2Int(monster.CellPos.x, monster.CellPos.y));
 		}
-		//투사체일 경우
 		else if (type == GameObjectType.Projectile)
 		{
 			Projectile projectile = gameObject as Projectile;
@@ -503,7 +496,6 @@ public class GameRoom : JobSerializer
 			projectile.Room = this;
 		}
 	
-		// 타인한테 정보 전송
 		S_Spawn spawnPacket = new S_Spawn();
 		spawnPacket.Objects.Add(gameObject.Info);
 		foreach (Player p in _players.Values)
@@ -516,13 +508,12 @@ public class GameRoom : JobSerializer
 	//...(중략)
 }
 ```
-- LeaveGame(int objectId) 함수를 통해 게임룸에서 삭제 및 퇴장하는 객체를 해체하고 다른 클라이언트 세션에게 그 내용을 통보합니다.
+- The LeaveGame(int objectId) function destroys objects that are being deleted and left from the game room and notifies other client sessions.
 ``` c#
 public class GameRoom : JobSerializer
 {
 	//...(중략)
 
-	//게임 퇴장
 	public void LeaveGame(int objectId)
 	{
 		GameObjectType type = ObjectManager.GetObjectTypeById(objectId);
@@ -536,7 +527,6 @@ public class GameRoom : JobSerializer
 			Map.ApplyLeave(player);
 			player.Room = null;
 
-			// 본인한테 정보 전송
 			S_LeaveGame leavePacket = new S_LeaveGame();
 			player.Session.Send(leavePacket);
 		}
@@ -558,7 +548,6 @@ public class GameRoom : JobSerializer
 			projectile.Room = null;
 		}
 
-		// 타인한테 정보 전송
 		{
 			S_Despawn despawnPacket = new S_Despawn();
 			despawnPacket.ObjectIds.Add(objectId);
@@ -575,30 +564,26 @@ public class GameRoom : JobSerializer
 ```
 
 
-# 맵 
+# Map 
 (캡처 필요) 그리드 형태의 맵
 ### **Map.cs**
-- 맵은 2d 그리드 형태로 Map 객체는 맵에 대한 모든 데이터를 담고 있습니다.
-- Map 객체는 맵의 최소/최대 좌표, 맵의 크기, 장애물들에 대한 정보를 갖고 있습니다.
-- ApplyMove()를 호출하여 캐릭터를 현재 좌표에서 목표 좌표로 이동시킵니다.
+- A map is in the form of a 2d grid, and the Map object contains all the data about the map.
+- The Map object holds information about the map's minimum/maximum coordinates, map size, and obstacles.
+- Call ApplyMove() to move the character from the current coordinates to the target coordinates.
 ``` c#
 public class Map
 {
-	//맵 최소/최대 좌표
 	public int MinX { get; set; }
 	public int MaxX { get; set; }
 	public int MinY { get; set; }
 	public int MaxY { get; set; }
 
-	//맵 크기
 	public int SizeX { get { return MaxX - MinX + 1; } }
 	public int SizeY { get { return MaxY - MinY + 1; } }
 
-	//장애물들에 대한 정보
 	bool[,] _collision;
 	GameObject[,] _objects;
 
-	//목표 좌표로 이동 가능한지 확인
 	public bool CanGo(Vector2Int cellPos, bool checkObjects = true)
 	{
 		if (cellPos.x < MinX || cellPos.x > MaxX)
@@ -611,7 +596,6 @@ public class Map
 		return !_collision[y, x] && (!checkObjects || _objects[y, x] == null);
 	}
 
-	//목표 좌표로 도착 처리
 	public bool ApplyMove(GameObject gameObject, Vector2Int dest)
 	{
 		ApplyLeave(gameObject);
@@ -631,13 +615,11 @@ public class Map
 			_objects[y, x] = gameObject;
 		}
 
-		// 실제 좌표 이동
 		posInfo.PosX = dest.x;
 		posInfo.PosY = dest.y;
 		return true;
 	}
 	
-	//특정 좌표에서 객체 떠남 처리
 	public bool ApplyLeave(GameObject gameObject)
 	{
 		if (gameObject.Room == null)
@@ -663,12 +645,12 @@ public class Map
 }
 ```
 
-# JobQueue 디자인 패턴 
+# JobQueue
 - (캡처 필요) 디자인 패턴 도식화
 ### **JobSerializer.cs**
-- 패킷 핸들러 처리는 서버 lock을 최소화 하기 위해 Command 패턴을 사용합니다.
+- Packet handler processing uses the Command pattern to minimize server locks.
 ``` c#
-//패킷 핸들러 처리는 서버 lock을 최소화 하기 위해 JobQueue 방식을 사용합니다.
+//Packet handler processing uses JobQueue method to minimize server lock.
 public class JobSerializer
 {
 	JobTimer _timer = new JobTimer();
@@ -679,7 +661,7 @@ public class JobSerializer
 	//...(중략)
 }
 ```
-- 핸들러를 Job으로 변환하여 _jobQueue에 넣어줍니다.
+- Convert the handler to Job and put it in _jobQueue.
 ``` c#
 public class JobSerializer
 {
@@ -696,7 +678,7 @@ public class JobSerializer
 	//...(중략)
 }
 ```
-- 게임룸에서 특정 시간 주기로 Tick이 발동되며 Flush를 호출합니다.
+- In the game room, Tick is triggered at a specific time period and Flush is called.
 ``` c#
 class Program
 {
@@ -717,7 +699,7 @@ class Program
 	//...(중략)
 }
 ```
-- Flush()에서 _jobQueue에 쌓여있는 것들을 차례로 실행합니다.
+- Flush() executes the items piled up in _jobQueue in turn.
 ``` c#	
 public class JobSerializer
 {
@@ -742,11 +724,11 @@ public class JobSerializer
 ```
 
 
-# 플레이어 이동
+# Player movement
 (캡쳐 필요)
 ### **GameRoom.cs**
-- 클라이언트 세션으로부터 C_Move 패킷을 받으면 해당 플레이어에 대한 이동을 처리합니다.
-- 목표 좌표로 이동 가능한지 검사한 후 이동 시킨 후, 이동 결과를 다른 클라이언트 세션에 통보해 동기화 시킵니다.
+- When we receive a C_Move packet from the client session, we process the move for that player.
+- After checking if it is possible to move to the target coordinates, move it, and notify the result of the movement to other client sessions to synchronize them.
 ``` c#
 public class GameRoom : JobSerializer
 {
@@ -784,13 +766,13 @@ public class GameRoom : JobSerializer
 ```
 
 
-# 플레이어 스킬 발동 및 판정 처리
+# Player combat and hit detection
 (캡쳐 필요)
 ### **GameRoom.cs**
-- 클라이언트 세션으로부터 C_Skill 패킷을 받으면 해당 플레이어에 대한 스킬 처리를 수행합니다.
-- 스킬이 발동되었다는 것을 다른 클라이언트 세션에 통보합니다.
-- 스킬 타입에 맞게 정의된 처리를 해줍니다.
-- 근접 공격의 경우 바로 피격 판정 처리를 진행하지만, 투사체 공격의 경우 투사체를 생성만 해주고 실제 피격 처리는 투사체의 로직에서 처리합니다.
+- When the C_Skill packet is received from the client session, it performs skill processing for that player.
+- Notifies other client sessions that the skill has been triggered.
+- It provides processing defined according to the skill type.
+- In the case of a melee attack, the hit judgment process is processed immediately, but in the case of a projectile attack, only the projectile is created and the actual hit processing is handled in the projectile logic.
 ``` c#
 public class GameRoom : JobSerializer
 {
@@ -859,10 +841,10 @@ public class GameRoom : JobSerializer
 
 
 ### **GameObject.cs**
-- GameObject는 게임 내 존재하는 모든 오브젝트의 상위 클래스입니다.
-- Player도 GameObject의 자식 클래스로 여기서 데미지 차감 처리, 사망 처리가 이루어집니다.
-- OnDamaged 함수에서 데미지 처리를, 만약 HP가 0이하가 되면 OnDead 함수에서 사망 처리를 이어서 수행합니다.
-- 데미지 처리, 사망 처리에서 각각 다른 클라이언트 세션에게 해당 내용을 통보합니다. 
+- GameObject is the superclass of all objects in the game.
+- Player is also a subclass of GameObject, and damage reduction and death are handled here.
+- Damage processing is performed in the OnDamaged function, and death processing is continued in the OnDead function if the HP is below 0.
+- In damage handling and death handling, each client session is notified of the corresponding contents.
 ``` c#
 public class GameObject
 {
@@ -911,11 +893,11 @@ public class GameObject
 ```
 
 
-# NPC->플레이어 Search AI
+# NPC AI - Search player
 (캡쳐 필요)
 ### **Monster.cs**
-- 몬스터 NPC AI는 FSM (Finite State Machine)으로 구현되어 있습니다.
-- 정해진 프레임마다 Update()가 호출되며 현재 State에 따른 행동을 수행합니다.
+- Monster NPC AI is implemented as FSM (Finite State Machine).
+- Update() is called every frame and performs actions according to the current state.
 ``` c#
 public class Monster : GameObject
 {
@@ -954,8 +936,8 @@ public class Monster : GameObject
 	//...(중략)
 }
 ```
-- Idle 상태에서는 정해진 범위 내에 플레이어가 있는지 탐색합니다.
-- 플레이어를 발견하면, 추적해야할 target으로 지정하고 몬스터의 상태가 Idle에서 Moving으로 업데이트 됩니다.
+- In the Idle state, it searches for players within a given range.
+- When a player is found, it is designated as a target to be tracked and the monster's status is updated from Idle to Moving.
 ``` c#
 public class Monster : GameObject
 {
@@ -991,8 +973,8 @@ public class Monster : GameObject
 	//...(중략)
 }
 ```
-- 최적의 Map.cs의 FindPath() 함수로 최적의 경로를 탐색한 후, 그 경로를 따라 이동합니다.
-- 플레이어가 너무 멀어지거나 방에서 퇴장하는 등의 예외 상황에 주의하며, 예외 처리를 꼼꼼히 해주어야 합니다.
+- After searching for the optimal path with the FindPath() function of Map.cs, move along the path.
+- Be aware of exceptions, such as players moving too far or leaving the room, and handle exceptions carefully.
 ``` c#
 public class Monster : GameObject
 {
@@ -1053,7 +1035,7 @@ public class Monster : GameObject
 	//...(중략)
 }
 ```
-- 최적 경로 탐색은 A* 알고리즘을 기반으로 구현되어 있습니다.
+- Optimal path search is implemented based on the A* algorithm.
 ``` c#
 public class Map
 {
@@ -1152,10 +1134,10 @@ public class Map
 ```
 
 
-# NPC->플레이어 Skill AI
+# NPC AI - Attack player
 ### **Monster.cs**
-- 몬스터 NPC가 플레이어를 추척하고 따라와 스킬을 쓸 수 있을 만큼 따라잡으면, 상태를 Skill로 업데이트 합니다.
-- UpdateSkill() 함수에서 플레이어를 대상으로 스킬을 발동합니다.
+- When the monster NPC tracks the player and catches up enough to use the skill, it updates its status to the skill.
+- In the UpdateSkill() function, we trigger the skill on the player.
 ``` c#
 public class Monster : GameObject
 {
