@@ -18,7 +18,7 @@ It is a game server that synchronizes the movement and battle of all players who
 :heavy_check_mark: Packet processing
 
 
-:heavy_check_mark: Data management
+:heavy_check_mark: Game data management
 
 
 :heavy_check_mark: Game room management
@@ -30,13 +30,13 @@ It is a game server that synchronizes the movement and battle of all players who
 :heavy_check_mark: Player movement 
 
 
-:heavy_check_mark: Player combat
+:heavy_check_mark: Player combat and hit detection
 
 
 :heavy_check_mark: NPC AI - Search player
 
 
-:heavy_check_mark: NPC AI - Combat
+:heavy_check_mark: NPC AI - Attack player
 
 
 # Server configuration management
@@ -194,7 +194,7 @@ public class ClientSession : PacketSession
 # Packet processing
 ### **PacketManager.cs**
 (캡처 필요)
-- 초기화 시 Register()를 호출하여 패킷 수신 시 처리해야 할 핸들러를 등록합니다.
+- Register() is called upon initialization to register handlers to be processed when packets are received.
 ``` c#
 class PacketManager
 {
@@ -213,7 +213,7 @@ class PacketManager
 		
 	public Action<PacketSession, IMessage, ushort> CustomHandler { get; set; }
 
-	//패킷 수신 시 처리해야 할 핸들러를 등록 
+	//Registers handlers to be processed when packets are received
 	public void Register()
 	{		
 		_onRecv.Add((ushort)MsgId.CMove, MakePacket<C_Move>);
@@ -225,7 +225,7 @@ class PacketManager
 	//...(중략)
 }	
 ```
-- 패킷을 수신하면 특정 패킷에 맞는 핸들러를 찾아 실행합니다. 
+- When a packet is received, it finds and executes a handler for that particular packet.
 - (추가 설명 필요) id, size 관련
 ``` c#
 class PacketManager
@@ -252,13 +252,12 @@ class PacketManager
 
 
 ### **PacketHandler.cs**
-- 각 컨텐츠 관련 패킷에 대한 실질적인 처리가 이루어지는 클래스입니다.
-- C_MoveHandler는 플레이어 이동 패킷을 처리합니다.
-- C_SkillHandler는 플레이어 스킬 발동 패킷을 처리합니다.
+- This is the class where the actual processing of each content-related packet is done.
+- C_MoveHandler handles player movement packets.
+- C_SkillHandler handles player skill activation packets.
 ``` c#
 class PacketHandler
 {
-	//플레이어 패킷 이동 패킷 처리 핸들러
 	public static void C_MoveHandler(PacketSession session, IMessage packet)
 	{
 		C_Move movePacket = packet as C_Move;
@@ -277,7 +276,6 @@ class PacketHandler
 		room.Push(room.HandleMove, player, movePacket);
 	}
 
-    	//플레이어 스킬 발동 패킷 처리 핸들러
     	public static void C_SkillHandler(PacketSession session, IMessage packet)
 	{
 		C_Skill skillPacket = packet as C_Skill;
@@ -297,7 +295,7 @@ class PacketHandler
 ```
 
 
-# 게임 데이터 관리
+# Game data management
 
 
 ### **DataManager.cs**
@@ -334,23 +332,23 @@ public class DataManager
 ```
 
 
-# 게임룸 입장 및 관리
+# Game room management
 
 
 ### **RoomManager.cs**
-- 게임에 존재하는 게임룸을 관리합니다.
-- 게임룸 생성, 해제, 특정 게임룸 검색 등의 기능을 수행합니다.
+- Manages the game rooms that exist in the game.
+- It performs functions such as creating and releasing game rooms, and searching for specific game rooms.
 ``` c#
 public class RoomManager
 {
 	public static RoomManager Instance { get; } = new RoomManager();
 
-	//dictionary에 존재하는 룸 저장 및 관리
+	//Stores current existing game rooms
 	Dictionary<int, GameRoom> _rooms = new Dictionary<int, GameRoom>();
 	object _lock = new object();
 	int _roomId = 1;
 		
-	//게임룸 추가
+	//Adds a game room
 	public GameRoom Add(int mapId)
 	{
 		GameRoom gameRoom = new GameRoom();
@@ -366,7 +364,7 @@ public class RoomManager
 		return gameRoom;
 	}
 
-	//게임룸 삭제
+	//Removes a game room
 	public bool Remove(int roomId)
 	{
 		lock (_lock)
@@ -375,7 +373,7 @@ public class RoomManager
 		}
 	}
 
-	//게임룸 검색
+	//Finds a game room
 	public GameRoom Find(int roomId)
 	{
 		lock (_lock)
@@ -392,9 +390,9 @@ public class RoomManager
 
 
 ### **GameRoom.cs**
-- 게임룸 객체로 게임룸Id, 맵데이터, 게임룸 내에 존재하는 다양한 객체를 관리합니다.
-- 초기화 시 특정 맵Id에 해당하는 맵데이터를 로드합니다.
-- 플레이어의 이동 동기화, 스킬 처리, 판정 처리 등 게임룸 내에서 이루어지는 행위를 실질적으로 처리하는 객체입니다.
+- As a game room object, it manages game room ID, map data, and various objects that exist in the game room.
+- When initializing, map data corresponding to a specific map ID is loaded.
+- This is an object that actually handles actions within the game room, such as player movement synchronization, skill processing, and hit detection.
 ``` c#
 public class GameRoom : JobSerializer
 {
