@@ -116,8 +116,11 @@ public class ClientSession : PacketSession
 }
 ```
 - Processing is defined when connecting/disconnecting from the server.
-- Right after creation, I call OnConnected(EndPoint endPoint) to create my player information and enter the game room.
+- Right after creation, I call OnConnected(EndPoint endPoint) to create my player and enter the game room.
 - When disconnected, OnDisconnected(EndPoint endPoint) is called to exit the game room, and the ClientSession object is no longer managed by the SessionManager.
+![mmo_unity_1](https://github.com/hyklux/portfolio-gameserver-csharp/assets/96270683/8d8bbd43-6b22-45a7-8773-2ea817472c4f)
+
+
 ``` c#
 public class ClientSession : PacketSession
 {
@@ -196,7 +199,6 @@ public class ClientSession : PacketSession
 
 # Packet processing
 ### **PacketManager.cs**
-(캡처 필요)
 - Register() is called upon initialization to register handlers to be processed when packets are received.
 ``` c#
 class PacketManager
@@ -225,11 +227,10 @@ class PacketManager
 		_handler.Add((ushort)MsgId.CSkill, PacketHandler.C_SkillHandler);
 	}
 	
-	//...(중략)
+	//...(omitted)
 }	
 ```
 - When a packet is received, it finds and executes a handler for that particular packet.
-- (추가 설명 필요) id, size 관련
 ``` c#
 class PacketManager
 {
@@ -249,7 +250,7 @@ class PacketManager
 			action.Invoke(session, buffer, id);
 	}
 	
-	//...(중략)
+	//...(omitted)
 }
 ```
 
@@ -411,7 +412,7 @@ public class GameRoom : JobSerializer
 		Map.LoadMap(mapId);
 	}
 		
-	//...이하 생략
+	//...
 }
 ```
 - Update() is called periodically according to the frame rate specified by the server.
