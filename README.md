@@ -182,8 +182,8 @@ public class ClientSession : PacketSession
 		MsgId msgId = (MsgId)Enum.Parse(typeof(MsgId), msgName);
 		ushort size = (ushort)packet.CalculateSize();
 		byte[] sendBuffer = new byte[size + 4];
-		Array.Copy(BitConverter.GetBytes((ushort)(size + 4)), 0, sendBuffer, 0, sizeof(ushort)); //버퍼 사이즈 값 추가
-		Array.Copy(BitConverter.GetBytes((ushort)msgId), 0, sendBuffer, 2, sizeof(ushort)); //msgId 값 추가
+		Array.Copy(BitConverter.GetBytes((ushort)(size + 4)), 0, sendBuffer, 0, sizeof(ushort)); //Add buffer size value
+		Array.Copy(BitConverter.GetBytes((ushort)msgId), 0, sendBuffer, 2, sizeof(ushort)); //Add msgId value
 		Array.Copy(packet.ToByteArray(), 0, sendBuffer, 4, size);
 	
 		Send(new ArraySegment<byte>(sendBuffer));
@@ -422,7 +422,7 @@ public class GameRoom : JobSerializer
 ``` c#
 public class GameRoom : JobSerializer
 {
-	//...(중략)
+	//...(omitted)
 	
 	public void Update()
 	{
@@ -437,7 +437,7 @@ public class GameRoom : JobSerializer
 			projectile.Update();
 		}
 
-		//JobQueue에 쌓인 Job을 순차적으로 실행한다.
+		//The jobs accumulated in the JobQueue are sequentially executed.
 		Flush();
 	}
 	
@@ -508,7 +508,7 @@ public class GameRoom : JobSerializer
 		}
 	}
 	
-	//...(중략)
+	//...(omitted)
 }
 ```
 - LeaveGame(int objectId) function destroys objects that are being deleted and left from the game room and notifies other client sessions.
@@ -726,7 +726,6 @@ public class JobSerializer
 
 
 # Player movement
-(캡쳐 필요)
 ### **GameRoom.cs**
 - When we receive a C_Move packet from the client session, we process the move for that player.
 - After checking if it is possible to move to the target coordinates, move it, and notify the result of the movement to other client sessions to synchronize them.
@@ -767,7 +766,6 @@ public class GameRoom : JobSerializer
 
 
 # Player combat and hit detection
-(캡쳐 필요)
 ### **GameRoom.cs**
 - When the C_Skill packet is received from the client session, it performs skill processing for that player.
 - Notifies other client sessions that the skill has been triggered.
@@ -802,11 +800,11 @@ public class GameRoom : JobSerializer
 
 		switch (skillData.skillType)
 		{
-			case SkillType.SkillAuto: //일반 근접 공격
+			case SkillType.SkillAuto: //normal melee attack
 				{
 					Vector2Int skillPos = player.GetFrontCellPos(info.PosInfo.MoveDir);
 					GameObject target = Map.Find(skillPos);
-					//근접 공격은 바로 피격 처리
+					//Melee attack damages are dealt with immediately
 					if (target != null)
 					{
 						Console.WriteLine("Hit GameObject !");
@@ -816,7 +814,7 @@ public class GameRoom : JobSerializer
 				break;
 			case SkillType.SkillProjectile: //원거리 화살 공격
 				{
-					//화살 공격은 화살 투사체만 생성 해주고, 화살 로직에서 충돌 및 피격처리를 한다.
+					//Arrow attacks create only arrow projectiles, and deal with collisions and hits in the arrow logic.
 					Arrow arrow = ObjectManager.Instance.Add<Arrow>();
 					if (arrow == null)
 						return;
