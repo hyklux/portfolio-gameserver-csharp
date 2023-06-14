@@ -118,6 +118,8 @@ public class ClientSession : PacketSession
 - Processing is defined when connecting/disconnecting from the server.
 - Right after creation, I call OnConnected(EndPoint endPoint) to create my player and enter the game room.
 - When disconnected, OnDisconnected(EndPoint endPoint) is called to exit the game room, and the ClientSession object is no longer managed by the SessionManager.
+
+
 ![mmo_unity_1](https://github.com/hyklux/portfolio-gameserver-csharp/assets/96270683/8d8bbd43-6b22-45a7-8773-2ea817472c4f)
 
 
@@ -234,7 +236,7 @@ class PacketManager
 ``` c#
 class PacketManager
 {
-	//...(중략)
+	//...(omitted)
 	
 	public void OnRecvPacket(PacketSession session, ArraySegment<byte> buffer)
 	{
@@ -330,7 +332,7 @@ public class DataManager
 		return Newtonsoft.Json.JsonConvert.DeserializeObject<Loader>(text);
 	}
 	
-	//...(중략)
+	//...(omitted)
 }
 ```
 
@@ -412,7 +414,7 @@ public class GameRoom : JobSerializer
 		Map.LoadMap(mapId);
 	}
 		
-	//...
+	//...(omitted)
 }
 ```
 - Update() is called periodically according to the frame rate specified by the server.
@@ -439,14 +441,14 @@ public class GameRoom : JobSerializer
 		Flush();
 	}
 	
-	//...(중략)
+	//...(omitted)
 }
 ``` 
-- The EnterGame(GameObject gameObject) function saves objects that are added to the game room and notifies other client sessions.
+- EnterGame(GameObject gameObject) function saves objects that are added to the game room and notifies other client sessions.
 ``` c#
 public class GameRoom : JobSerializer
 {
-	//...(중략)
+	//...(omitted)
 	
 	public void EnterGame(GameObject gameObject)
 	{
@@ -509,11 +511,11 @@ public class GameRoom : JobSerializer
 	//...(중략)
 }
 ```
-- The LeaveGame(int objectId) function destroys objects that are being deleted and left from the game room and notifies other client sessions.
+- LeaveGame(int objectId) function destroys objects that are being deleted and left from the game room and notifies other client sessions.
 ``` c#
 public class GameRoom : JobSerializer
 {
-	//...(중략)
+	//...(omitted)
 
 	public void LeaveGame(int objectId)
 	{
@@ -560,13 +562,12 @@ public class GameRoom : JobSerializer
 		}
 	}
 
-	//...(중략)
+	//...(omitted)
 }
 ```
 
 
 # Map 
-(캡처 필요) 그리드 형태의 맵
 ### **Map.cs**
 - A map is in the form of a 2d grid, and the Map object contains all the data about the map.
 - The Map object holds information about the map's minimum/maximum coordinates, map size, and obstacles.
@@ -647,7 +648,6 @@ public class Map
 ```
 
 # JobQueue
-- (캡처 필요) 디자인 패턴 도식화
 ### **JobSerializer.cs**
 - Packet handler processing uses the Command pattern to minimize server locks.
 ``` c#
@@ -659,14 +659,14 @@ public class JobSerializer
 	object _lock = new object();
 	bool _flush = false;
 
-	//...(중략)
+	//...(omitted)
 }
 ```
 - Convert the handler to Job and put it in _jobQueue.
 ``` c#
 public class JobSerializer
 {
-	//...(중략)
+	//...(omitted)
 	
 	public void Push(IJob job)
 	{
@@ -676,7 +676,7 @@ public class JobSerializer
 		}
 	}
 	
-	//...(중략)
+	//...(omitted)
 }
 ```
 - In the game room, Tick is triggered at a specific time period and Flush is called.
@@ -697,14 +697,14 @@ class Program
 		_timers.Add(timer);
 	}
 	
-	//...(중략)
+	//...(omitted)
 }
 ```
 - Flush() executes the items piled up in _jobQueue in turn.
 ``` c#	
 public class JobSerializer
 {
-	//...(중략)
+	//...(omitted)
 	
 	public void Flush()
 	{
@@ -720,7 +720,7 @@ public class JobSerializer
 		}
 	}
 	
-	//...(중략)
+	//...(omitted)
 }
 ```
 
@@ -733,9 +733,8 @@ public class JobSerializer
 ``` c#
 public class GameRoom : JobSerializer
 {
-	//...(중략)
+	//...(omitted)
 	
-	//이동 처리
 	public void HandleMove(Player player, C_Move movePacket)
 	{
 		if (player == null)
@@ -744,7 +743,7 @@ public class GameRoom : JobSerializer
 		PositionInfo movePosInfo = movePacket.PosInfo;
 		ObjectInfo info = player.Info;
 
-		// 다른 좌표로 이동할 경우, 갈 수 있는지 체크
+		// Check if the player can move to the destination position
 		if (movePosInfo.PosX != info.PosInfo.PosX || movePosInfo.PosY != info.PosInfo.PosY)
 		{
 			if (Map.CanGo(new Vector2Int(movePosInfo.PosX, movePosInfo.PosY)) == false)
@@ -755,14 +754,14 @@ public class GameRoom : JobSerializer
 		info.PosInfo.MoveDir = movePosInfo.MoveDir;
 		Map.ApplyMove(player, new Vector2Int(movePosInfo.PosX, movePosInfo.PosY));
 
-		// 다른 플레이어한테도 브로드캐스팅하여 동기화
+		// Broadcast to other players so that they can syncronize my player
 		S_Move resMovePacket = new S_Move();
 		resMovePacket.ObjectId = player.Info.ObjectId;
 		resMovePacket.PosInfo = movePacket.PosInfo;
 		Broadcast(resMovePacket);
 	}
 	
-	//...(중략)
+	//...(omitted)
 }
 ```
 
@@ -777,9 +776,9 @@ public class GameRoom : JobSerializer
 ``` c#
 public class GameRoom : JobSerializer
 {
-	//...(중략)
+	//...(omitted)
 	
-	//스킬 처리
+
 	public void HandleSkill(Player player, C_Skill skillPacket)
 	{
 		if (player == null)
@@ -791,7 +790,7 @@ public class GameRoom : JobSerializer
 
 		info.PosInfo.State = CreatureState.Skill;
 		
-		//다른 클라이언트 세션에 스킬 발동 통보
+		//Broadcast the activated skill to other players
 		S_Skill skill = new S_Skill() { Info = new SkillInfo() };
 		skill.ObjectId = info.ObjectId;
 		skill.Info.SkillId = skillPacket.Info.SkillId;
@@ -801,7 +800,6 @@ public class GameRoom : JobSerializer
 		if (DataManager.SkillDict.TryGetValue(skillPacket.Info.SkillId, out skillData) == false)
 			return;
 
-		//근접 스킬, 투사체 스킬 등 스킬타입에 따라 다르게 처리한다.
 		switch (skillData.skillType)
 		{
 			case SkillType.SkillAuto: //일반 근접 공격
@@ -836,7 +834,7 @@ public class GameRoom : JobSerializer
 		}
 	}
 	
-	//...(중략)
+	//...(omitted)
 }
 ```
 
@@ -849,9 +847,8 @@ public class GameRoom : JobSerializer
 ``` c#
 public class GameObject
 {
-	//...(중략)
+	//...(omitted)
 	
-	//데미지 처리
 	public virtual void OnDamaged(GameObject attacker, int damage)
 	{
 		if (Room == null)
@@ -859,43 +856,40 @@ public class GameObject
 
 		Stat.Hp = Math.Max(Stat.Hp - damage, 0);
 
-		//다른 클라이언트 세션에  통보
+		//Broadcast to other client sessions
 		S_ChangeHp changePacket = new S_ChangeHp();
 		changePacket.ObjectId = Id;
 		changePacket.Hp = Stat.Hp;
 		Room.Broadcast(changePacket);
 
-		//HP가 0이하가 되면 사망 처리를 위해 OnDead를 호출한다.
 		if (Stat.Hp <= 0)
 		{
 			OnDead(attacker);
 		}
 	}
 
-	//사망 처리
 	public virtual void OnDead(GameObject attacker)
 	{
 		if (Room == null)
 			return;
 
-		//다른 클라이언트 세션에 사망 통보
+		//Broadcast the death of the player to other client sessions
 		S_Die diePacket = new S_Die();
 		diePacket.ObjectId = Id;
 		diePacket.AttackerId = attacker.Id;
 		Room.Broadcast(diePacket);
 
-		//사망 처리되면 플레이어를 게임룸에서 퇴장시킨다.
+		//When player is dead, the player is removed from the game room.
 		GameRoom room = Room;
 		room.LeaveGame(Id);
 	}
 	
-	//...(중략)
+	//...(omitted)
 }
 ```
 
 
 # NPC AI - Search player
-(캡쳐 필요)
 ### **Monster.cs**
 - Monster NPC AI is implemented as FSM (Finite State Machine).
 - Update() is called every frame and performs actions according to the current state.
@@ -934,7 +928,7 @@ public class Monster : GameObject
 		}
 	}
 	
-	//...(중략)
+	//...(omitted)
 }
 ```
 - In the Idle state, it searches for players within a given range.
@@ -942,7 +936,7 @@ public class Monster : GameObject
 ``` c#
 public class Monster : GameObject
 {
-	//...(중략)
+	//...(omitted)
 		
 	Player _target;
 	int _searchCellDist = 10;
@@ -955,7 +949,7 @@ public class Monster : GameObject
 			
 		_nextSearchTick = Environment.TickCount64 + 1000;
 
-		//탐색 범위(_searchCellDist)에 플레이어가 있으면 target으로 설정
+		//Set to target if there is a player in the search range (_searchCellDist)
 		Player target = Room.FindPlayer(p =>
 		{
 			Vector2Int dir = p.CellPos - CellPos;
@@ -967,11 +961,11 @@ public class Monster : GameObject
 
 		_target = target;
 		
-		//target 있으면 Moving으로 상태 변화
+		//If there is a target, the status changes to Moving
 		State = CreatureState.Moving;
 	}
 	
-	//...(중략)
+	//...(omitted)
 }
 ```
 - After searching for the optimal path with the FindPath() function of Map.cs, move along the path.
@@ -979,7 +973,7 @@ public class Monster : GameObject
 ``` c#
 public class Monster : GameObject
 {
-	//...(중략)
+	//...(omitted)
 	
 	int _skillRange = 1;
 	long _nextMoveTick = 0;
@@ -990,7 +984,6 @@ public class Monster : GameObject
 		int moveTick = (int)(1000 / Speed);
 		_nextMoveTick = Environment.TickCount64 + moveTick;
 
-		//target이 유효한지 확인
 		if (_target == null || _target.Room != Room)
 		{
 			_target = null;
@@ -1009,7 +1002,7 @@ public class Monster : GameObject
 			return;
 		}
 
-		//최단 경로 탐색(A* 알고리즘 기반) 
+		//Finding the shortest path (based on the A* algorithm)
 		List<Vector2Int> path = Room.Map.FindPath(CellPos, _target.CellPos, checkObjects: false);
 		if (path.Count < 2 || path.Count > _chaseCellDist)
 		{
@@ -1019,7 +1012,6 @@ public class Monster : GameObject
 			return;
 		}
 
-		// 스킬로 넘어갈지 체크
 		if (dist <= _skillRange && (dir.x == 0 || dir.y == 0))
 		{
 			_coolTick = 0;
@@ -1027,110 +1019,12 @@ public class Monster : GameObject
 			return;
 		}
 
-		// 이동
 		Dir = GetDirFromVec(path[1] - CellPos);
 		Room.Map.ApplyMove(this, path[1]);
 		BroadcastMove();
 	}
 	
-	//...(중략)
-}
-```
-- Optimal path search is implemented based on the A* algorithm.
-``` c#
-public class Map
-{
-	//...(중략)
-
-	// U D L R
-	int[] _deltaY = new int[] { 1, -1, 0, 0 };
-	int[] _deltaX = new int[] { 0, 0, -1, 1 };
-	int[] _cost = new int[] { 10, 10, 10, 10 };
-
-	public List<Vector2Int> FindPath(Vector2Int startCellPos, Vector2Int destCellPos, bool checkObjects = true)
-	{
-		List<Pos> path = new List<Pos>();
-
-		// 점수 매기기
-		// F = G + H
-		// F = 최종 점수 (작을 수록 좋음, 경로에 따라 달라짐)
-		// G = 시작점에서 해당 좌표까지 이동하는데 드는 비용 (작을 수록 좋음, 경로에 따라 달라짐)
-		// H = 목적지에서 얼마나 가까운지 (작을 수록 좋음, 고정)
-
-		// (y, x) 이미 방문했는지 여부 (방문 = closed 상태)
-		bool[,] closed = new bool[SizeY, SizeX]; // CloseList
-
-		// (y, x) 가는 길을 한 번이라도 발견했는지
-		// 발견X => MaxValue
-		// 발견O => F = G + H
-		int[,] open = new int[SizeY, SizeX]; // OpenList
-		for (int y = 0; y < SizeY; y++)
-			for (int x = 0; x < SizeX; x++)
-				open[y, x] = Int32.MaxValue;
-
-		Pos[,] parent = new Pos[SizeY, SizeX];
-
-		// 오픈리스트에 있는 정보들 중에서, 가장 좋은 후보를 빠르게 뽑아오기 위한 도구
-		PriorityQueue<PQNode> pq = new PriorityQueue<PQNode>();
-
-		// CellPos -> ArrayPos
-		Pos pos = Cell2Pos(startCellPos);
-		Pos dest = Cell2Pos(destCellPos);
-
-		// 시작점 발견 (예약 진행)
-		open[pos.Y, pos.X] = 10 * (Math.Abs(dest.Y - pos.Y) + Math.Abs(dest.X - pos.X));
-		pq.Push(new PQNode() { F = 10 * (Math.Abs(dest.Y - pos.Y) + Math.Abs(dest.X - pos.X)), G = 0, Y = pos.Y, X = pos.X });
-		parent[pos.Y, pos.X] = new Pos(pos.Y, pos.X);
-
-		while (pq.Count > 0)
-		{
-			// 제일 좋은 후보를 찾는다
-			PQNode node = pq.Pop();
-			// 동일한 좌표를 여러 경로로 찾아서, 더 빠른 경로로 인해서 이미 방문(closed)된 경우 스킵
-			if (closed[node.Y, node.X])
-				continue;
-
-			// 방문한다
-			closed[node.Y, node.X] = true;
-			// 목적지 도착했으면 바로 종료
-			if (node.Y == dest.Y && node.X == dest.X)
-				break;
-
-			// 상하좌우 등 이동할 수 있는 좌표인지 확인해서 예약(open)한다
-			for (int i = 0; i < _deltaY.Length; i++)
-			{
-				Pos next = new Pos(node.Y + _deltaY[i], node.X + _deltaX[i]);
-
-				// 유효 범위를 벗어났으면 스킵
-				// 벽으로 막혀서 갈 수 없으면 스킵
-				if (next.Y != dest.Y || next.X != dest.X)
-				{
-					if (CanGo(Pos2Cell(next), checkObjects) == false) // CellPos
-						continue;
-				}
-
-				// 이미 방문한 곳이면 스킵
-				if (closed[next.Y, next.X])
-					continue;
-
-				// 비용 계산
-				int g = 0;// node.G + _cost[i];
-				int h = 10 * ((dest.Y - next.Y) * (dest.Y - next.Y) + (dest.X - next.X) * (dest.X - next.X));
-				// 다른 경로에서 더 빠른 길 이미 찾았으면 스킵
-				if (open[next.Y, next.X] < g + h)
-					continue;
-
-				// 예약 진행
-				open[dest.Y, dest.X] = g + h;
-				pq.Push(new PQNode() { F = g + h, G = g, Y = next.Y, X = next.X });
-				parent[next.Y, next.X] = new Pos(node.Y, node.X);
-			}
-		}
-
-		return CalcCellPathFromParent(parent, dest);
-	}
-	
-	//...(중략)
+	//...(omitted)
 }
 ```
 
@@ -1142,14 +1036,13 @@ public class Map
 ``` c#
 public class Monster : GameObject
 {
-	//...(중략)
+	//...(omitted)
 
 	long _coolTick = 0;
 	protected virtual void UpdateSkill()
 	{
 		if (_coolTick == 0)
 		{
-			// 유효한 타겟인지
 			if (_target == null || _target.Room != Room || _target.Hp == 0)
 			{
 				_target = null;
@@ -1158,7 +1051,6 @@ public class Monster : GameObject
 				return;
 			}
 
-			// 스킬이 아직 사용 가능한지
 			Vector2Int dir = (_target.CellPos - CellPos);
 			int dist = dir.cellDistFromZero;
 			bool canUseSkill = (dist <= _skillRange && (dir.x == 0 || dir.y == 0));
@@ -1169,7 +1061,7 @@ public class Monster : GameObject
 				return;
 			}
 
-			// 타게팅 방향 주시
+			// Set to target direction
 			MoveDir lookDir = GetDirFromVec(dir);
 			if (Dir != lookDir)
 			{
@@ -1180,16 +1072,16 @@ public class Monster : GameObject
 			Skill skillData = null;
 			DataManager.SkillDict.TryGetValue(1, out skillData);
 
-			// 데미지 판정
+			// Take damage
 			_target.OnDamaged(this, skillData.damage + Stat.Attack);
 
-			// 스킬 사용 Broadcast
+			// Broadcast to other players
 			S_Skill skill = new S_Skill() { Info = new SkillInfo() };
 			skill.ObjectId = Id;
 			skill.Info.SkillId = skillData.id;
 			Room.Broadcast(skill);
 
-			// 스킬 쿨타임 적용
+			// Apply skill cooltime
 			int coolTick = (int)(1000 * skillData.cooldown);
 			_coolTick = Environment.TickCount64 + coolTick;
 		}
@@ -1200,6 +1092,6 @@ public class Monster : GameObject
 		_coolTick = 0;
 	}
 	
-	//...(중략)
+	//...(omitted)
 }
 ```
