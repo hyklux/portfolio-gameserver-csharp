@@ -25,9 +25,9 @@ namespace Server.Game
 		{
 			Map.LoadMap(mapId);
 
-			Monster monster = ObjectManager.Instance.Add<Monster>();
+/*			Monster monster = ObjectManager.Instance.Add<Monster>();
 			monster.CellPos = new Vector2Int(5, 5);
-			EnterGame(monster);
+			EnterGame(monster);*/
 		}
 
 		// 주기적으로 호출하는 함수. 매 프레임이 아닌 서버가 지정한 프레임레이트에 맞게 호출된다. 
