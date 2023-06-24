@@ -1,11 +1,11 @@
 # portfolio-gameserver-csharp
-2D action game server implemented using C#
+2D action game (both client and server) implemented using C#
 
 # Introduction
-This is 2D action game server implemented using C#
+This is 2D action game implemented using C#.
 
 
-It is a game server that synchronizes the movement and battle of all players who have entered the game room.
+The explanation below only covers the server, which synchronizes the movement and battle of all players who have entered the game room.
 
 
 # Implementations
