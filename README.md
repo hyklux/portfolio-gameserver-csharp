@@ -1,8 +1,8 @@
 # portfolio-gameserver-csharp
-2D online action game implemented using Unity3d and .NET
+2D online action game made with Unity3d and .NET
 
 # Introduction
-This is a 2D online action game implemented using Unity3d and .NET.
+This is a 2D online action game made with Unity3d and .NET.
 
 
 The explanation below only covers the server, which synchronizes the movement and battle of all players who have entered the game room.
